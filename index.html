@@ -1,1 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta property="og:title" content="Mmeli Global | Premium Products" />
+  <meta property="og:description" content="Shop premium products, track shipments, get quotations, and manage your account at Mmeli Global." />
+  <meta property="og:image" content="https://mmeliglobal.com/socialmedia.PNG" />
+  <meta property="og:url" content="https://mmeliglobal.com/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <title>Mmeli Global | Premium Products</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
 
+<header class="header">
+  <div class="logo-area" id="logoArea">
+    <img src="https://via.placeholder.com/200x50?text=Mmeli+Global" alt="Mmeli Global Logo" class="logo-image">
+    <span class="logo-text visually-hidden">Mmeli Global</span>
+  </div>
+  <div class="cart-icon" onclick="switchPage('cart')">🛒 <span id="cartCount">0</span></div>
+</header>
+
+<div class="search-bar">
+  <div class="search-wrapper">
+    <input type="text" id="searchInput" placeholder="Search products..." onkeyup="searchProducts()">
+    <label for="scanInput">📷</label>
+    <input type="file" id="scanInput" hidden accept="image/*">
+  </div>
+</div>
+<div class="golden-line"></div>
+<div id="mainMenu" class="main-menu"></div>
+<div id="subMenu" class="sub-menu"></div>
+
+<!-- PAGES -->
+<section id="home" class="page active">
+  <div class="filter-bar">
+    <select id="categoryFilter" onchange="filterProducts()"><option value="all">All Categories</option></select>
+    <select id="subcategoryFilter" onchange="filterProducts()"><option value="all">All Subcategories</option></select>
+    <input type="number" id="minPrice" placeholder="Min Price" onchange="filterProducts()">
+    <input type="number" id="maxPrice" placeholder="Max Price" onchange="filterProducts()">
+    <button onclick="resetFilters()">Reset</button>
+  </div>
+  <div id="productsContainer"></div>
+</section>
+
+<section id="productPage" class="page">
+  <div class="product-detail">
+    <div class="product-actions">
+      <button class="back-btn-transparent" onclick="switchPage('home')">←</button>
+      <button class="download-btn-transparent" onclick="downloadImage()">⬇</button>
+    </div>
+    <img id="mainImage" class="main-img" alt="Main product">
+    <div id="subImages" class="sub-images"></div>
+    <div class="product-header">
+      <h3 id="pName"></h3>
+      <span class="price" id="pPrice"></span>
+    </div>
+    <div class="product-options">
+      <div class="color-selector"><label>🎨 Color:</label><select id="colorSelect"></select></div>
+      <select id="sizeSelect"></select>
+    </div>
+    <div class="description" id="pDesc"></div>
+    <button class="add-to-cart-btn" onclick="addToCart()">Add to Cart</button>
+  </div>
+  <div id="productRecommend" class="recommendations"></div>
+</section>
+
+<section id="cart" class="page"><div id="cartList"></div><button onclick="checkout()">Proceed to Checkout</button><div id="cartRecommend" class="recommendations"></div></section>
+<section id="tracking" class="page"><div id="map"></div><div class="tracking-box"><input id="trackCode" placeholder="Tracking Code"><input id="phoneLast4" placeholder="Last 4 digits"><button onclick="trackNow()">Track</button></div><div id="shipmentHistory"></div><div id="trackingRecommend" class="recommendations"></div></section>
+<section id="chat" class="page"><button onclick="sendMsg('I need product info')">Product Info</button><button onclick="sendMsg('Shipping cost?')">Shipping Cost</button><button onclick="sendMsg('Delivery time?')">Delivery Time</button><div id="chatRecommend" class="recommendations"></div></section>
+<section id="promo" class="page"><div id="promoList"></div><div id="promoProducts"></div><div id="promoRecommend" class="recommendations"></div></section>
+
+<section id="account" class="page">
+  <div id="loginBox"><input id="name" placeholder="Name"><input id="surname" placeholder="Surname"><input id="phone" placeholder="Phone"><input id="address" placeholder="Shipping Address"><button onclick="login()">Sign In</button></div>
+  <div id="dashboard" style="display:none;"><h3 id="userInfo"></h3><div onclick="viewMyQuotations()">💰 My Quotations</div><div onclick="viewMyOrders()">🧾 My Orders</div><div onclick="switchPage('tracking')">📦 Tracking</div><div onclick="showSettings()">⚙️ Settings</div><div id="adminEntry" style="color:#e67e22; margin-top:20px;">🔐 Admin Portal</div></div>
+  <div id="myQuotations" style="display:none;"><div class="back-button-bar"><button onclick="closeQuotations()">← Back</button></div><h3>My Quotations</h3><div id="quotationsList"></div></div>
+  <div id="myOrders" style="display:none;"><div class="back-button-bar"><button onclick="closeOrders()">← Back</button></div><h3>My Orders</h3><div id="ordersList"></div></div>
+  <div id="settingsForm" style="display:none;"><div class="back-button-bar"><button onclick="closeSettings()">← Back</button></div><h3>Edit Profile</h3><input id="editName"><input id="editSurname"><input id="editPhone"><input id="editAddress"><button onclick="saveProfile()">Save Changes</button><button onclick="logout()">Logout</button></div>
+  <div id="accountRecommend" class="recommendations"></div>
+</section>
+
+<!-- ADMIN DASHBOARD -->
+<section id="adminDashboard" class="page">
+  <div id="adminLogin" style="text-align:center; padding:20px;"><h3>Admin Login</h3><input type="text" id="adminUser" placeholder="Username"><input type="password" id="adminPass" placeholder="Password"><button onclick="adminLogin()">Login</button></div>
+  <div id="adminPanel" style="display:none;">
+    <h3>Admin Dashboard</h3>
+    <div class="admin-cards">
+      <div class="admin-card" onclick="switchPage('adminOrdersPage')"><h4>📦 Orders</h4><div id="adminOrdersSummary"></div></div>
+      <div class="admin-card" onclick="switchPage('adminProductsPage')"><h4>🛍️ Products</h4><div id="adminProductsSummary"></div></div>
+      <div class="admin-card" onclick="switchPage('adminAddProductPage')"><h4>➕ Add Product</h4></div>
+      <div class="admin-card" onclick="switchPage('adminQuotesPage')"><h4>📄 Quotation</h4></div>
+      <div class="admin-card" onclick="switchPage('adminShippingPage')"><h4>🚚 Create Shipment</h4></div>
+      <div class="admin-card" onclick="switchPage('adminMarketingPage')"><h4>📢 Marketing</h4><div id="adminMarketingSummary"></div></div>
+      <div class="admin-card" onclick="switchPage('adminShippingRecordsPage')"><h4>📋 Shipping Records</h4><div id="adminShippingSummary"></div></div>
+      <div class="admin-card" onclick="switchPage('adminSettingsPage')"><h4>⚙️ Settings</h4></div>
+    </div>
+  </div>
+</section>
+
+<section id="adminOrdersPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')">← Back</button></div><h3>Orders Management</h3><div id="adminOrdersFull"></div></section>
+<section id="adminProductsPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')">← Back</button></div><h3>Product List</h3><div id="adminProductsFull"></div></section>
+<section id="adminAddProductPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')">← Back</button></div><h3>Add / Edit Product</h3><input id="newName" placeholder="Name"><input id="newPrice" placeholder="Price"><input id="newImage" placeholder="Main Image URL"><input id="newExtraImages" placeholder="Extra images (comma)"><textarea id="newDesc" placeholder="Description"></textarea><input id="newCategory" placeholder="Category"><input id="newSubcategory" placeholder="Subcategory"><input id="newColor" placeholder="Colors (comma)"><input id="newSize" placeholder="Size options (e.g., S:20, M:25)"><button onclick="addProduct()">Add Product</button></section>
+<section id="adminQuotesPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')">← Back</button></div><h3>Create Quotation</h3><div id="quotationForm"></div></section>
+<section id="adminShippingPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')">← Back</button></div><h3>Create Shipment</h3><div class="shipping-form"><input id="shipClientName" placeholder="Client Name"><input id="shipClientPhone" placeholder="Client Phone"><input id="shipClientAddress" placeholder="Client Address"><input id="shipReceiverName" placeholder="Receiver Name"><input id="shipReceiverPhone" placeholder="Receiver Phone"><input id="shipReceiverAddress" placeholder="Receiver Address"><input id="shipTrackingCode" placeholder="Tracking Code (auto)"><textarea id="shipNotes" placeholder="Notes"></textarea><input type="file" id="packageImage" accept="image/*"><button onclick="saveShipment()">Save Shipment</button></div><div id="pendingShipmentsList"></div></section>
+
+<!-- NEW ADMIN PAGES -->
+<section id="adminMarketingPage" class="page">
+  <div class="back-button-bar"><button onclick="switchPage('adminDashboard')">← Back</button></div>
+  <h3>Marketing Campaigns</h3>
+  <div class="marketing-form"><input id="promoCode" placeholder="Promo Code"><input id="promoDesc" placeholder="Description"><input id="promoDiscount" type="number" placeholder="Discount %"><input id="promoValidUntil" type="date"><button onclick="addPromotion()">Add Promotion</button></div>
+  <div id="promotionsList" style="margin-top:20px;"></div>
+</section>
+
+<section id="adminShippingRecordsPage" class="page">
+  <div class="back-button-bar"><button onclick="switchPage('adminDashboard')">← Back</button></div>
+  <h3>All Shipments Record</h3>
+  <div id="allShipmentsList"></div>
+</section>
+
+<section id="adminSettingsPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')">← Back</button></div><h3>Settings</h3><input id="siteName" placeholder="Site Name"><button onclick="saveSettings()">Save</button></section>
+
+<div id="quoteModal" class="modal" style="display:none;"><div class="modal-content"><div class="modal-header"><h3>Quote Preview</h3><span class="close-modal" onclick="closeQuoteModal()">&times;</span></div><div id="quotePreview"></div><div class="modal-footer"><button onclick="printQuote()">Print / Save PDF</button><button onclick="closeQuoteModal()">Close</button></div></div></div>
+
+<nav class="bottom-nav"><div onclick="resetHome()">🏠</div><div onclick="switchPage('tracking')">📦</div><div onclick="switchPage('chat')">💬</div><div onclick="switchPage('promo')">🔥</div><div onclick="switchPage('account')">👤</div></nav>
+
+<script src="script.js"></script>
+</body>
+</html>
