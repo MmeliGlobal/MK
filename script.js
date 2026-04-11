@@ -1626,3 +1626,84 @@ function initApp() {
 window.onload = () => {
   loadSupabase();
 };
+
+// ==================== PRODUCT SHARING & UNIQUE LINKS ====================
+
+// Add a share button to the product page (if not already present)
+function addShareButton() {
+  const productActions = document.querySelector('.product-actions');
+  if (productActions && !document.getElementById('shareProductBtn')) {
+    const shareBtn = document.createElement('button');
+    shareBtn.id = 'shareProductBtn';
+    shareBtn.className = 'download-btn-transparent';
+    shareBtn.innerHTML = '🔗';
+    shareBtn.title = 'Share product';
+    shareBtn.onclick = shareProduct;
+    productActions.appendChild(shareBtn);
+  }
+}
+
+// Share product: copy link or use native share
+function shareProduct() {
+  if (!currentProduct) return;
+  const shareUrl = `${window.location.origin}${window.location.pathname}?product=${encodeURIComponent(currentProduct.slug || currentProduct.id)}`;
+  if (navigator.share) {
+    navigator.share({ title: currentProduct.name, url: shareUrl });
+  } else {
+    navigator.clipboard.writeText(shareUrl);
+    alert("Product link copied to clipboard!");
+  }
+}
+
+// Update browser URL without reload when product opens
+const originalOpenProduct = openProduct;
+window.openProduct = function(product) {
+  originalOpenProduct(product);
+  const slug = product.slug || product.id;
+  const newUrl = `${window.location.pathname}?product=${encodeURIComponent(slug)}`;
+  window.history.pushState({ product: slug }, '', newUrl);
+  addShareButton();
+};
+
+// On page load, check URL for product parameter and open it
+function checkUrlForProduct() {
+  if (!allProducts.length) return;
+  const params = new URLSearchParams(window.location.search);
+  const productId = params.get('product');
+  if (productId) {
+    const product = allProducts.find(p => (p.slug || p.id) == productId);
+    if (product) openProduct(product);
+  }
+}
+
+// Override switchPage to preserve share button when returning to product page
+const originalSwitchPage = switchPage;
+window.switchPage = function(pageId) {
+  originalSwitchPage(pageId);
+  if (pageId === 'productPage') addShareButton();
+};
+
+// Listen to back/forward navigation
+window.addEventListener('popstate', function(event) {
+  if (event.state && event.state.product) {
+    const product = allProducts.find(p => (p.slug || p.id) == event.state.product);
+    if (product) openProduct(product);
+  } else {
+    // If no product in state, go home
+    switchPage('home');
+  }
+});
+
+// Call this after products are loaded (inside your existing afterLoad or init)
+// Add this line inside your afterLoad() function:
+// checkUrlForProduct();
+
+// To avoid editing existing functions, we monkey-patch afterLoad
+const originalAfterLoad = afterLoad;
+if (typeof afterLoad === 'function') {
+  window.afterLoad = function() {
+    originalAfterLoad();
+    checkUrlForProduct();
+    addShareButton();
+  };
+}
