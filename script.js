@@ -1613,6 +1613,8 @@ function afterLoad() {
   loadPromos();
   updateCartCount();
   renderCart();
+  checkUrlForProduct();
+  addShareButton();
 }
 
 function initApp() {
