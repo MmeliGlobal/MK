@@ -1709,3 +1709,88 @@ if (typeof afterLoad === 'function') {
     addShareButton();
   };
 }
+
+// ==================== DYNAMIC SOCIAL MEDIA PREVIEW ====================
+function updateMetaTags(product) {
+  if (!product) return;
+  
+  // Update or create Open Graph meta tags
+  let metaTitle = document.querySelector('meta[property="og:title"]');
+  let metaDesc = document.querySelector('meta[property="og:description"]');
+  let metaImage = document.querySelector('meta[property="og:image"]');
+  let metaUrl = document.querySelector('meta[property="og:url"]');
+  
+  if (!metaTitle) {
+    metaTitle = document.createElement('meta');
+    metaTitle.setAttribute('property', 'og:title');
+    document.head.appendChild(metaTitle);
+  }
+  if (!metaDesc) {
+    metaDesc = document.createElement('meta');
+    metaDesc.setAttribute('property', 'og:description');
+    document.head.appendChild(metaDesc);
+  }
+  if (!metaImage) {
+    metaImage = document.createElement('meta');
+    metaImage.setAttribute('property', 'og:image');
+    document.head.appendChild(metaImage);
+  }
+  if (!metaUrl) {
+    metaUrl = document.createElement('meta');
+    metaUrl.setAttribute('property', 'og:url');
+    document.head.appendChild(metaUrl);
+  }
+  
+  metaTitle.setAttribute('content', product.name + ' | Mmeli Global');
+  metaDesc.setAttribute('content', product.desc.substring(0, 200));
+  metaImage.setAttribute('content', product.mainImage);
+  metaUrl.setAttribute('content', window.location.href);
+  
+  // Also update standard title
+  document.title = product.name + ' | Mmeli Global';
+}
+
+// Override openProduct to update meta tags when product opens
+const originalOpenProductForMeta = openProduct;
+window.openProduct = function(product) {
+  originalOpenProductForMeta(product);
+  updateMetaTags(product);
+};
+
+// When returning to home, reset meta tags to default
+function resetMetaTags() {
+  let metaTitle = document.querySelector('meta[property="og:title"]');
+  let metaDesc = document.querySelector('meta[property="og:description"]');
+  let metaImage = document.querySelector('meta[property="og:image"]');
+  if (metaTitle) metaTitle.setAttribute('content', 'Mmeli Global | Premium Products');
+  if (metaDesc) metaDesc.setAttribute('content', 'Shop premium products, track shipments, get quotations, and manage your account at Mmeli Global.');
+  if (metaImage) metaImage.setAttribute('content', 'https://mmeliglobal.com/socialmedia.PNG');
+  document.title = 'Mmeli Global | Premium Products';
+}
+
+// Override switchPage to reset meta when leaving product page
+const originalSwitchPageForMeta = switchPage;
+window.switchPage = function(pageId) {
+  originalSwitchPageForMeta(pageId);
+  if (pageId !== 'productPage') resetMetaTags();
+};
+
+// Call this when products are loaded and URL has product parameter
+function applyMetaFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const productId = params.get('product');
+  if (productId && allProducts.length) {
+    const product = allProducts.find(p => (p.slug || p.id) == productId);
+    if (product) updateMetaTags(product);
+  }
+}
+
+// Add to your afterLoad function: applyMetaFromUrl();
+// (or monkey-patch again)
+const originalAfterLoadForMeta = afterLoad;
+if (typeof afterLoad === 'function') {
+  window.afterLoad = function() {
+    originalAfterLoadForMeta();
+    applyMetaFromUrl();
+  };
+}
