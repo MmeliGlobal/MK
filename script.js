@@ -33,7 +33,7 @@ let loggedInUser = null;
 let editProductId = null;
 let isAdmin = false;
 
-// ==================== CATEGORY HIERARCHY ====================
+// ==================== CATEGORY HIERARCHY (unchanged) ====================
 const categoryHierarchy = {
   "Phones": { "Smartphones": ["Android Phones", "iPhones", "Rugged Phones"], "Feature Phones": ["Keypad Phones"], "Accessories": ["Chargers", "Power Banks", "Phone Cases", "Screen Protectors"] },
   "Cameras": { "Cameras": ["Digital Cameras", "DSLR Cameras", "Mirrorless Cameras"], "Video Equipment": ["Camcorders", "Action Cameras"], "Accessories": ["Tripods", "Lighting", "Microphones"] },
@@ -826,14 +826,18 @@ function loadRecommendations(pageId) {
   });
 }
 
-// ==================== SEARCH & SCAN ====================
+// ==================== SEARCH & SCAN (IMPROVED) ====================
 function searchProducts() {
-  const term = document.getElementById("searchInput").value.toLowerCase();
+  const term = document.getElementById("searchInput").value.toLowerCase().trim();
   if (term === "") {
     filterProducts();
     return;
   }
-  const filtered = allProducts.filter(p => p.name.toLowerCase().includes(term));
+  // Search in both product name AND description
+  const filtered = allProducts.filter(p => 
+    p.name.toLowerCase().includes(term) || 
+    (p.desc && p.desc.toLowerCase().includes(term))
+  );
   displayHomeProducts(filtered);
   switchPage("home");
 }
@@ -1026,7 +1030,7 @@ function closeOrders() {
   document.getElementById("dashboard").style.display = "block";
 }
 
-// ==================== ADMIN FUNCTIONS ====================
+// ==================== ADMIN FUNCTIONS (with Font Awesome icons) ====================
 function adminLogin() {
   const user = document.getElementById("adminUser").value;
   const pass = document.getElementById("adminPass").value;
@@ -1043,13 +1047,13 @@ function loadAdminSummaries() {
   let ordersCount = 0;
   if (useSupabase) {
     supabaseClient.from('orders').select('*', { count: 'exact', head: true }).then(({ count }) => {
-      document.getElementById("adminOrdersSummary").innerHTML = `📦 ${count || 0} orders`;
+      document.getElementById("adminOrdersSummary").innerHTML = `<i class="fas fa-box"></i> ${count || 0} orders`;
     });
   } else {
     let ordersArray = JSON.parse(localStorage.getItem('orders') || '[]');
-    document.getElementById("adminOrdersSummary").innerHTML = `📦 ${ordersArray.length} orders`;
+    document.getElementById("adminOrdersSummary").innerHTML = `<i class="fas fa-box"></i> ${ordersArray.length} orders`;
   }
-  document.getElementById("adminProductsSummary").innerHTML = `🛍️ ${allProducts.length} products`;
+  document.getElementById("adminProductsSummary").innerHTML = `<i class="fas fa-tags"></i> ${allProducts.length} products`;
   loadOrdersFull();
   loadProductsFull();
 }
@@ -1061,22 +1065,22 @@ function loadOrdersFull() {
     supabaseClient.from('orders').select('*, profiles(full_name)').then(({ data, error }) => {
       if (error) { container.innerHTML = "<p>Error loading orders.</p>"; return; }
       container.innerHTML = data.length ? data.map(o => `
-        <div style="border-bottom:1px solid #ccc; margin-bottom:8px;">
-          <strong>${escapeHtml(o.order_number || o.id)}</strong> - ${o.status}<br>
-          User: ${o.profiles?.full_name || 'Guest'}<br>
-          Total: $${o.total_amount}<br>
-          <button onclick="updateOrderStatus('${o.id}')">Mark as Shipped</button>
+        <div style="border-bottom:1px solid #ccc; margin-bottom:8px; padding:8px;">
+          <strong><i class="fas fa-receipt"></i> ${escapeHtml(o.order_number || o.id)}</strong> - ${o.status}<br>
+          <i class="fas fa-user"></i> User: ${o.profiles?.full_name || 'Guest'}<br>
+          <i class="fas fa-dollar-sign"></i> Total: $${o.total_amount}<br>
+          <button onclick="updateOrderStatus('${o.id}')" style="background:#28a745;"><i class="fas fa-shipping-fast"></i> Mark as Shipped</button>
         </div>
       `).join('') : "<p>No orders yet.</p>";
     });
   } else {
     let ordersArray = JSON.parse(localStorage.getItem('orders') || '[]');
     container.innerHTML = ordersArray.length ? ordersArray.map(o => `
-      <div style="border-bottom:1px solid #ccc; margin-bottom:8px;">
-        <strong>${escapeHtml(o.trackingCode)}</strong> - ${o.status}<br>
-        User: ${escapeHtml(o.user.name)} ${escapeHtml(o.user.surname)}<br>
-        Total: $${o.total}<br>
-        <button onclick="updateOrderStatus('${o.trackingCode}')">Mark as Shipped</button>
+      <div style="border-bottom:1px solid #ccc; margin-bottom:8px; padding:8px;">
+        <strong><i class="fas fa-receipt"></i> ${escapeHtml(o.trackingCode)}</strong> - ${o.status}<br>
+        <i class="fas fa-user"></i> User: ${escapeHtml(o.user.name)} ${escapeHtml(o.user.surname)}<br>
+        <i class="fas fa-dollar-sign"></i> Total: $${o.total}<br>
+        <button onclick="updateOrderStatus('${o.trackingCode}')" style="background:#28a745;"><i class="fas fa-shipping-fast"></i> Mark as Shipped</button>
       </div>
     `).join('') : "<p>No orders yet.</p>";
   }
@@ -1109,10 +1113,10 @@ function loadProductsFull() {
   }
   container.innerHTML = allProducts.map(p => `
     <div style="border-bottom:1px solid #ccc; margin-bottom:8px; padding:8px;">
-      <strong>${escapeHtml(p.name)}</strong> - $${p.price}<br>
-      ${p.cat} / ${p.subcat}<br>
-      <button onclick="editProduct(${p.id})">✏️ Edit</button>
-      <button onclick="deleteProduct(${p.id})" style="background:#e74c3c;">🗑️ Delete</button>
+      <strong><i class="fas fa-cube"></i> ${escapeHtml(p.name)}</strong> - $${p.price}<br>
+      <i class="fas fa-folder"></i> ${p.cat} / ${p.subcat}<br>
+      <button onclick="editProduct(${p.id})" style="background:#ffc107; color:#000;"><i class="fas fa-edit"></i> Edit</button>
+      <button onclick="deleteProduct(${p.id})" style="background:#dc3545;"><i class="fas fa-trash"></i> Delete</button>
     </div>
   `).join('');
 }
@@ -1202,7 +1206,7 @@ async function editProduct(id) {
   const sizeString = product.sizeOptions.map(s => `${s.size}:${s.price}`).join(", ");
   document.getElementById("newSize").value = sizeString;
   const addBtn = document.querySelector("#adminAddProductPage button");
-  addBtn.innerText = "Update Product";
+  addBtn.innerHTML = '<i class="fas fa-save"></i> Update Product';
   addBtn.onclick = () => updateProduct();
   switchPage("adminAddProductPage");
 }
@@ -1277,7 +1281,7 @@ async function updateProduct() {
   document.getElementById("newColor").value = "";
   document.getElementById("newSize").value = "";
   const addBtn = document.querySelector("#adminAddProductPage button");
-  addBtn.innerText = "Add Product";
+  addBtn.innerHTML = '<i class="fas fa-plus"></i> Add Product';
   addBtn.onclick = () => addProduct();
   editProductId = null;
   switchPage("adminDashboard");
@@ -1563,20 +1567,20 @@ function loadShipments() {
   const unpaid = shipmentsArray.filter(s => s.paid === false);
   pendingDiv.innerHTML = pending.map(s => `
     <div class="shipment-card">
-      <strong>Tracking:</strong> ${escapeHtml(s.trackingCode)}<br>
-      <strong>Client:</strong> ${escapeHtml(s.client.name)}<br>
-      <strong>Receiver:</strong> ${escapeHtml(s.receiver.name)}<br>
+      <strong><i class="fas fa-truck"></i> Tracking:</strong> ${escapeHtml(s.trackingCode)}<br>
+      <strong><i class="fas fa-user"></i> Client:</strong> ${escapeHtml(s.client.name)}<br>
+      <strong><i class="fas fa-user-check"></i> Receiver:</strong> ${escapeHtml(s.receiver.name)}<br>
       ${s.image ? `<img src="${s.image}" style="max-width:100px;" loading="lazy">` : ''}<br>
-      <button onclick="markAsPaid('${s.trackingCode}')">Mark Paid</button>
-      <button onclick="markAsShippedShipment('${s.trackingCode}')">Mark Shipped</button>
+      <button onclick="markAsPaid('${s.trackingCode}')" style="background:#28a745;"><i class="fas fa-money-bill"></i> Mark Paid</button>
+      <button onclick="markAsShippedShipment('${s.trackingCode}')" style="background:#007bff;"><i class="fas fa-check-circle"></i> Mark Shipped</button>
     </div>
   `).join('');
   unpaidDiv.innerHTML = unpaid.map(s => `
     <div class="shipment-card">
-      <strong>Tracking:</strong> ${escapeHtml(s.trackingCode)}<br>
-      <strong>Client:</strong> ${escapeHtml(s.client.name)}<br>
-      <strong>Total:</strong> $${s.total || '0'}<br>
-      <button onclick="markAsPaid('${s.trackingCode}')">Mark Paid</button>
+      <strong><i class="fas fa-truck"></i> Tracking:</strong> ${escapeHtml(s.trackingCode)}<br>
+      <strong><i class="fas fa-user"></i> Client:</strong> ${escapeHtml(s.client.name)}<br>
+      <strong><i class="fas fa-dollar-sign"></i> Total:</strong> $${s.total || '0'}<br>
+      <button onclick="markAsPaid('${s.trackingCode}')" style="background:#28a745;"><i class="fas fa-money-bill"></i> Mark Paid</button>
     </div>
   `).join('');
 }
@@ -1610,7 +1614,7 @@ function addShareButton() {
     const shareBtn = document.createElement('button');
     shareBtn.id = 'shareProductBtn';
     shareBtn.className = 'download-btn-transparent';
-    shareBtn.innerHTML = '🔗';
+    shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
     shareBtn.title = 'Share product';
     shareBtn.style.fontSize = '24px';
     shareBtn.style.cursor = 'pointer';
