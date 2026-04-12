@@ -1723,3 +1723,144 @@ function initApp() {
 window.onload = () => {
   loadSupabase();
 };
+// ==================== FONT AWESOME ICONS FOR DYNAMIC CONTENT ====================
+
+// Override loadProductsFull to use FA icons in admin product list
+const originalLoadProductsFull = loadProductsFull;
+window.loadProductsFull = function() {
+  originalLoadProductsFull();
+  // After original runs, replace button icons
+  setTimeout(() => {
+    document.querySelectorAll('#adminProductsFull button').forEach(btn => {
+      if (btn.innerText.includes('Edit')) {
+        btn.innerHTML = '<i class="fas fa-edit"></i> Edit';
+        btn.style.backgroundColor = '#ffc107';
+        btn.style.color = '#000';
+      } else if (btn.innerText.includes('Delete')) {
+        btn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        btn.style.backgroundColor = '#dc3545';
+      }
+    });
+  }, 100);
+};
+
+// Override loadOrdersFull for order buttons
+const originalLoadOrdersFull = loadOrdersFull;
+window.loadOrdersFull = function() {
+  originalLoadOrdersFull();
+  setTimeout(() => {
+    document.querySelectorAll('#adminOrdersFull button').forEach(btn => {
+      if (btn.innerText.includes('Mark as Shipped')) {
+        btn.innerHTML = '<i class="fas fa-shipping-fast"></i> Mark as Shipped';
+        btn.style.backgroundColor = '#28a745';
+      }
+    });
+  }, 100);
+};
+
+// Override loadShipments for shipment buttons
+const originalLoadShipments = loadShipments;
+window.loadShipments = function() {
+  originalLoadShipments();
+  setTimeout(() => {
+    document.querySelectorAll('#pendingShipmentsList button, #unpaidShipmentsList button').forEach(btn => {
+      if (btn.innerText.includes('Mark Paid')) {
+        btn.innerHTML = '<i class="fas fa-money-bill"></i> Mark Paid';
+        btn.style.backgroundColor = '#28a745';
+      } else if (btn.innerText.includes('Mark Shipped')) {
+        btn.innerHTML = '<i class="fas fa-check-circle"></i> Mark Shipped';
+        btn.style.backgroundColor = '#007bff';
+      }
+    });
+  }, 100);
+};
+
+// Override viewMyOrders and viewMyQuotations buttons (if needed)
+const originalViewMyOrders = viewMyOrders;
+window.viewMyOrders = function() {
+  originalViewMyOrders();
+  setTimeout(() => {
+    document.querySelectorAll('#ordersList button').forEach(btn => {
+      if (btn.innerText.includes('Reorder')) {
+        btn.innerHTML = '<i class="fas fa-redo"></i> Reorder';
+      }
+    });
+  }, 100);
+};
+
+const originalViewMyQuotations = viewMyQuotations;
+window.viewMyQuotations = function() {
+  originalViewMyQuotations();
+  setTimeout(() => {
+    document.querySelectorAll('#quotationsList button').forEach(btn => {
+      if (btn.innerText.includes('View Quote')) {
+        btn.innerHTML = '<i class="fas fa-file-pdf"></i> View Quote';
+      }
+    });
+  }, 100);
+};
+
+// Also update the "Add Product" and "Update Product" buttons in admin form
+const originalAddProduct = addProduct;
+window.addProduct = function() {
+  originalAddProduct();
+  // The button text is already changed in the existing code, but ensure it's FA
+  const addBtn = document.querySelector('#adminAddProductPage button');
+  if (addBtn && addBtn.innerText.includes('Add Product')) {
+    addBtn.innerHTML = '<i class="fas fa-plus"></i> Add Product';
+  }
+};
+
+const originalUpdateProduct = updateProduct;
+window.updateProduct = function() {
+  originalUpdateProduct();
+  const updateBtn = document.querySelector('#adminAddProductPage button');
+  if (updateBtn && updateBtn.innerText.includes('Update Product')) {
+    updateBtn.innerHTML = '<i class="fas fa-save"></i> Update Product';
+  }
+};
+
+// Replace the download button icon on product page (if exists)
+function fixProductPageIcons() {
+  const downloadBtn = document.querySelector('.download-btn-transparent');
+  if (downloadBtn && downloadBtn.innerHTML === '⬇') {
+    downloadBtn.innerHTML = '<i class="fas fa-download"></i>';
+  }
+  const backBtn = document.querySelector('.back-btn-transparent');
+  if (backBtn && backBtn.innerHTML === '←') {
+    backBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
+  }
+}
+
+// Call this after product page loads
+const originalSwitchPageForIcons = switchPage;
+window.switchPage = function(pageId) {
+  originalSwitchPageForIcons(pageId);
+  if (pageId === 'productPage') {
+    setTimeout(fixProductPageIcons, 100);
+  }
+};
+
+// Also fix the "Share" button if it's still text
+function fixShareButton() {
+  const shareBtn = document.getElementById('shareProductBtn');
+  if (shareBtn && shareBtn.innerHTML !== '<i class="fas fa-share-alt"></i>') {
+    shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
+  }
+}
+const originalAddShareButton = addShareButton;
+window.addShareButton = function() {
+  originalAddShareButton();
+  fixShareButton();
+};
+
+// Run all fixes after initial load
+window.addEventListener('load', function() {
+  setTimeout(() => {
+    loadProductsFull();
+    loadOrdersFull();
+    loadShipments();
+    fixProductPageIcons();
+    fixShareButton();
+  }, 500);
+});
