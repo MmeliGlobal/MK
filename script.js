@@ -138,7 +138,8 @@ async function loadProducts() {
       colors: p.colors || ["Default"],
       sizeOptions: p.size_options || [{ size: "Standard", price: p.price }],
       mainImage: (p.images && p.images[0]) || "https://via.placeholder.com/300",
-      subImages: p.images ? p.images.slice(1) : []
+      subImages: p.images ? p.images.slice(1) : [],
+      slug: p.slug || p.id
     }));
     allProducts = shuffleArray(allProducts);
     afterLoad();
@@ -151,8 +152,8 @@ function loadDemoProducts() {
     allProducts = JSON.parse(stored);
   } else {
     allProducts = [
-      { id: 1, name: "Elegant Leather Tote", desc: "Premium full-grain leather tote bag.", cat: "Fashion", subcat: "Handbags", price: 129.99, colors: ["Black","Brown"], sizeOptions: [{size:"One Size",price:129.99}], mainImage: "https://i.imgur.com/Z1aTPZl.jpeg", subImages: [] },
-      { id: 2, name: "iPhone 16e", desc: "Latest iPhone with advanced features.", cat: "Phones", subcat: "iPhones", price: 357, colors: ["Blue","Black"], sizeOptions: [{size:"128GB",price:357}], mainImage: "https://i.imgur.com/9wBjqIU.jpeg", subImages: [] }
+      { id: 1, name: "Elegant Leather Tote", desc: "Premium full-grain leather tote bag.", cat: "Fashion", subcat: "Handbags", price: 129.99, colors: ["Black","Brown"], sizeOptions: [{size:"One Size",price:129.99}], mainImage: "https://i.imgur.com/Z1aTPZl.jpeg", subImages: [], slug: "elegant-leather-tote" },
+      { id: 2, name: "iPhone 16e", desc: "Latest iPhone with advanced features.", cat: "Phones", subcat: "iPhones", price: 357, colors: ["Blue","Black"], sizeOptions: [{size:"128GB",price:357}], mainImage: "https://i.imgur.com/9wBjqIU.jpeg", subImages: [], slug: "iphone-16e" }
     ];
   }
   allProducts = shuffleArray(allProducts);
@@ -179,7 +180,8 @@ async function saveProduct(product) {
         colors: product.colors,
         size_options: product.sizeOptions,
         images: [product.mainImage, ...(product.subImages || [])],
-        is_active: true
+        is_active: true,
+        slug: product.slug || product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
       }])
       .select();
     if (error) { console.error(error); return null; }
@@ -195,7 +197,8 @@ async function saveProduct(product) {
         price: product.price,
         colors: product.colors,
         size_options: product.sizeOptions,
-        images: [product.mainImage, ...(product.subImages || [])]
+        images: [product.mainImage, ...(product.subImages || [])],
+        slug: product.slug || product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
       })
       .eq('id', product.id);
     if (error) { console.error(error); return null; }
@@ -538,7 +541,7 @@ async function checkout() {
   switchPage("home");
 }
 
-// ==================== UI DISPLAY FUNCTIONS (unchanged from original) ====================
+// ==================== UI DISPLAY FUNCTIONS ====================
 function displayHomeProducts(products) {
   const container = document.getElementById("productsContainer");
   if (!container) return;
@@ -632,6 +635,8 @@ function openProduct(product) {
   }
   loadRecommendations("product");
   switchPage("productPage");
+  // Update URL and meta tags for sharing
+  updateProductURLAndMeta(product);
 }
 
 function changeMainImage(src, el) {
@@ -753,6 +758,7 @@ function switchPage(pageId) {
     if (lastClickedMainCat) selectMainCategory(lastClickedMainCat);
     else filterProducts();
     document.getElementById("subMenu").innerHTML = "";
+    resetMetaTags();
   } else if (pageId === "cart") {
     renderCart();
     loadRecommendations("cart");
@@ -778,6 +784,8 @@ function switchPage(pageId) {
     setupQuotationForm();
   } else if (pageId === "adminShippingPage") {
     loadShipments();
+  } else if (pageId === "productPage") {
+    addShareButton();
   }
 }
 
@@ -860,7 +868,6 @@ function trackNow() {
   }
   let ordersArray = [];
   if (useSupabase) {
-    // We'll need to fetch orders from Supabase for the user
     alert("Tracking from Supabase: please implement order fetch or use demo orders.");
     return;
   } else {
@@ -888,12 +895,11 @@ function loadPromos() {
   if (promoDiv) promoDiv.innerHTML = "<h3>🔥 Limited Time: 20% off all handbags! Use code MMELI20 🔥</h3>";
 }
 
-// ==================== ACCOUNT FUNCTIONS (localStorage fallback for quotations/orders view) ====================
+// ==================== ACCOUNT FUNCTIONS ====================
 function viewMyQuotations() {
   if (!loggedInUser) { alert("Please sign in first."); return; }
   let quotes = [];
   if (useSupabase) {
-    // For simplicity, load from localStorage for now – you can extend to Supabase later
     quotes = JSON.parse(localStorage.getItem('quotations') || '[]');
   } else {
     quotes = JSON.parse(localStorage.getItem('quotations') || '[]');
@@ -922,7 +928,6 @@ function viewMyOrders() {
   if (!loggedInUser) { alert("Please sign in first."); return; }
   let ordersArray = [];
   if (useSupabase) {
-    // For simplicity, load from localStorage – you can replace with Supabase query
     ordersArray = JSON.parse(localStorage.getItem('orders') || '[]');
   } else {
     ordersArray = JSON.parse(localStorage.getItem('orders') || '[]');
@@ -975,7 +980,6 @@ function showSettings() {
 }
 
 function saveProfile() {
-  // For Supabase, update profiles table – but keeping simple for now
   const newName = document.getElementById("editName").value;
   const newSurname = document.getElementById("editSurname").value;
   const newPhone = document.getElementById("editPhone").value;
@@ -1036,7 +1040,6 @@ function adminLogin() {
 function loadAdminSummaries() {
   let ordersCount = 0;
   if (useSupabase) {
-    // Fetch from Supabase or fallback to localStorage
     supabaseClient.from('orders').select('*', { count: 'exact', head: true }).then(({ count }) => {
       document.getElementById("adminOrdersSummary").innerHTML = `📦 ${count || 0} orders`;
     });
@@ -1596,6 +1599,93 @@ function markAsShippedShipment(trackingCode) {
   }
 }
 
+// ==================== PRODUCT SHARING & META TAGS (Edge Function) ====================
+function addShareButton() {
+  const productActions = document.querySelector('.product-actions');
+  if (productActions && !document.getElementById('shareProductBtn')) {
+    const shareBtn = document.createElement('button');
+    shareBtn.id = 'shareProductBtn';
+    shareBtn.className = 'download-btn-transparent';
+    shareBtn.innerHTML = '🔗';
+    shareBtn.title = 'Share product';
+    shareBtn.style.fontSize = '24px';
+    shareBtn.style.cursor = 'pointer';
+    shareBtn.onclick = shareProduct;
+    productActions.appendChild(shareBtn);
+  }
+}
+
+function shareProduct() {
+  if (!currentProduct) return;
+  const productId = currentProduct.slug || currentProduct.id;
+  // Use the Edge Function to generate rich preview
+  const shareUrl = `https://proljdccjrifqgbmsyco.supabase.co/functions/v1/smooth-processor?p=${encodeURIComponent(productId)}`;
+  if (navigator.share) {
+    navigator.share({ title: currentProduct.name, url: shareUrl });
+  } else {
+    navigator.clipboard.writeText(shareUrl);
+    alert("Product link copied to clipboard!\nShare it on WhatsApp, etc.");
+  }
+}
+
+function updateProductURLAndMeta(product) {
+  if (!product) return;
+  // Update browser URL without reload
+  const slug = product.slug || product.id;
+  const newUrl = `${window.location.pathname}?product=${encodeURIComponent(slug)}`;
+  window.history.pushState({ product: slug }, '', newUrl);
+  // Update meta tags for social preview (though WhatsApp may not execute JS, but good for other platforms)
+  let metaTitle = document.querySelector('meta[property="og:title"]');
+  let metaDesc = document.querySelector('meta[property="og:description"]');
+  let metaImage = document.querySelector('meta[property="og:image"]');
+  let metaUrl = document.querySelector('meta[property="og:url"]');
+  if (!metaTitle) {
+    metaTitle = document.createElement('meta');
+    metaTitle.setAttribute('property', 'og:title');
+    document.head.appendChild(metaTitle);
+  }
+  if (!metaDesc) {
+    metaDesc = document.createElement('meta');
+    metaDesc.setAttribute('property', 'og:description');
+    document.head.appendChild(metaDesc);
+  }
+  if (!metaImage) {
+    metaImage = document.createElement('meta');
+    metaImage.setAttribute('property', 'og:image');
+    document.head.appendChild(metaImage);
+  }
+  if (!metaUrl) {
+    metaUrl = document.createElement('meta');
+    metaUrl.setAttribute('property', 'og:url');
+    document.head.appendChild(metaUrl);
+  }
+  metaTitle.setAttribute('content', product.name + ' | Mmeli Global');
+  metaDesc.setAttribute('content', (product.desc || '').substring(0, 200));
+  metaImage.setAttribute('content', product.mainImage);
+  metaUrl.setAttribute('content', window.location.href);
+  document.title = product.name + ' | Mmeli Global';
+}
+
+function resetMetaTags() {
+  let metaTitle = document.querySelector('meta[property="og:title"]');
+  let metaDesc = document.querySelector('meta[property="og:description"]');
+  let metaImage = document.querySelector('meta[property="og:image"]');
+  if (metaTitle) metaTitle.setAttribute('content', 'Mmeli Global | Premium Products');
+  if (metaDesc) metaDesc.setAttribute('content', 'Shop premium products, track shipments, get quotations, and manage your account at Mmeli Global.');
+  if (metaImage) metaImage.setAttribute('content', 'https://mmeliglobal.com/socialmedia.PNG');
+  document.title = 'Mmeli Global | Premium Products';
+}
+
+function checkUrlForProduct() {
+  if (!allProducts.length) return;
+  const params = new URLSearchParams(window.location.search);
+  const productId = params.get('product');
+  if (productId) {
+    const product = allProducts.find(p => (p.slug || p.id) == productId);
+    if (product) openProduct(product);
+  }
+}
+
 // ==================== ADMIN ACCESS ====================
 document.getElementById("adminEntry")?.addEventListener("click", () => {
   switchPage("adminDashboard");
@@ -1628,169 +1718,3 @@ function initApp() {
 window.onload = () => {
   loadSupabase();
 };
-
-// ==================== PRODUCT SHARING & UNIQUE LINKS ====================
-
-// Add a share button to the product page (if not already present)
-function addShareButton() {
-  const productActions = document.querySelector('.product-actions');
-  if (productActions && !document.getElementById('shareProductBtn')) {
-    const shareBtn = document.createElement('button');
-    shareBtn.id = 'shareProductBtn';
-    shareBtn.className = 'download-btn-transparent';
-    shareBtn.innerHTML = '🔗';
-    shareBtn.title = 'Share product';
-    shareBtn.onclick = shareProduct;
-    productActions.appendChild(shareBtn);
-  }
-}
-
-// Share product: copy link or use native share
-function shareProduct() {
-  if (!currentProduct) return;
-  const shareUrl = `${window.location.origin}${window.location.pathname}?product=${encodeURIComponent(currentProduct.slug || currentProduct.id)}`;
-  if (navigator.share) {
-    navigator.share({ title: currentProduct.name, url: shareUrl });
-  } else {
-    navigator.clipboard.writeText(shareUrl);
-    alert("Product link copied to clipboard!");
-  }
-}
-
-// Update browser URL without reload when product opens
-const originalOpenProduct = openProduct;
-window.openProduct = function(product) {
-  originalOpenProduct(product);
-  const slug = product.slug || product.id;
-  const newUrl = `${window.location.pathname}?product=${encodeURIComponent(slug)}`;
-  window.history.pushState({ product: slug }, '', newUrl);
-  addShareButton();
-};
-
-// On page load, check URL for product parameter and open it
-function checkUrlForProduct() {
-  if (!allProducts.length) return;
-  const params = new URLSearchParams(window.location.search);
-  const productId = params.get('product');
-  if (productId) {
-    const product = allProducts.find(p => (p.slug || p.id) == productId);
-    if (product) openProduct(product);
-  }
-}
-
-// Override switchPage to preserve share button when returning to product page
-const originalSwitchPage = switchPage;
-window.switchPage = function(pageId) {
-  originalSwitchPage(pageId);
-  if (pageId === 'productPage') addShareButton();
-};
-
-// Listen to back/forward navigation
-window.addEventListener('popstate', function(event) {
-  if (event.state && event.state.product) {
-    const product = allProducts.find(p => (p.slug || p.id) == event.state.product);
-    if (product) openProduct(product);
-  } else {
-    // If no product in state, go home
-    switchPage('home');
-  }
-});
-
-// Call this after products are loaded (inside your existing afterLoad or init)
-// Add this line inside your afterLoad() function:
-// checkUrlForProduct();
-
-// To avoid editing existing functions, we monkey-patch afterLoad
-const originalAfterLoad = afterLoad;
-if (typeof afterLoad === 'function') {
-  window.afterLoad = function() {
-    originalAfterLoad();
-    checkUrlForProduct();
-    addShareButton();
-  };
-}
-
-// ==================== DYNAMIC SOCIAL MEDIA PREVIEW ====================
-function updateMetaTags(product) {
-  if (!product) return;
-  
-  // Update or create Open Graph meta tags
-  let metaTitle = document.querySelector('meta[property="og:title"]');
-  let metaDesc = document.querySelector('meta[property="og:description"]');
-  let metaImage = document.querySelector('meta[property="og:image"]');
-  let metaUrl = document.querySelector('meta[property="og:url"]');
-  
-  if (!metaTitle) {
-    metaTitle = document.createElement('meta');
-    metaTitle.setAttribute('property', 'og:title');
-    document.head.appendChild(metaTitle);
-  }
-  if (!metaDesc) {
-    metaDesc = document.createElement('meta');
-    metaDesc.setAttribute('property', 'og:description');
-    document.head.appendChild(metaDesc);
-  }
-  if (!metaImage) {
-    metaImage = document.createElement('meta');
-    metaImage.setAttribute('property', 'og:image');
-    document.head.appendChild(metaImage);
-  }
-  if (!metaUrl) {
-    metaUrl = document.createElement('meta');
-    metaUrl.setAttribute('property', 'og:url');
-    document.head.appendChild(metaUrl);
-  }
-  
-  metaTitle.setAttribute('content', product.name + ' | Mmeli Global');
-  metaDesc.setAttribute('content', product.desc.substring(0, 200));
-  metaImage.setAttribute('content', product.mainImage);
-  metaUrl.setAttribute('content', window.location.href);
-  
-  // Also update standard title
-  document.title = product.name + ' | Mmeli Global';
-}
-
-// Override openProduct to update meta tags when product opens
-const originalOpenProductForMeta = openProduct;
-window.openProduct = function(product) {
-  originalOpenProductForMeta(product);
-  updateMetaTags(product);
-};
-
-// When returning to home, reset meta tags to default
-function resetMetaTags() {
-  let metaTitle = document.querySelector('meta[property="og:title"]');
-  let metaDesc = document.querySelector('meta[property="og:description"]');
-  let metaImage = document.querySelector('meta[property="og:image"]');
-  if (metaTitle) metaTitle.setAttribute('content', 'Mmeli Global | Premium Products');
-  if (metaDesc) metaDesc.setAttribute('content', 'Shop premium products, track shipments, get quotations, and manage your account at Mmeli Global.');
-  if (metaImage) metaImage.setAttribute('content', 'https://mmeliglobal.com/socialmedia.PNG');
-  document.title = 'Mmeli Global | Premium Products';
-}
-
-// Override switchPage to reset meta when leaving product page
-const originalSwitchPageForMeta = switchPage;
-window.switchPage = function(pageId) {
-  originalSwitchPageForMeta(pageId);
-  if (pageId !== 'productPage') resetMetaTags();
-};
-
-// Call this when products are loaded and URL has product parameter
-function applyMetaFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const productId = params.get('product');
-  if (productId && allProducts.length) {
-    const product = allProducts.find(p => (p.slug || p.id) == productId);
-    if (product) updateMetaTags(product);
-  }
-}
-
-// Add to your afterLoad function: applyMetaFromUrl();
-// (or monkey-patch again)
-const originalAfterLoadForMeta = afterLoad;
-if (typeof afterLoad === 'function') {
-  window.afterLoad = function() {
-    originalAfterLoadForMeta();
-    applyMetaFromUrl();
-  };
-}
