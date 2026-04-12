@@ -537,3 +537,17 @@ button:hover {
 .bottom-nav div i {
   color: #d4af37;
 }
+/* Make all buttons with icons look good */
+button i, .admin-card i, .cart-icon i, .bottom-nav i {
+  margin-right: 6px;
+}
+.admin-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-card i {
+  font-size: 28px;
+  width: 32px;
+  text-align: center;
+}
