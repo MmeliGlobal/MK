@@ -33,7 +33,7 @@ let loggedInUser = null;
 let editProductId = null;
 let isAdmin = false;
 
-// ==================== CATEGORY HIERARCHY (unchanged) ====================
+// ==================== CATEGORY HIERARCHY ====================
 const categoryHierarchy = {
   "Phones": { "Smartphones": ["Android Phones", "iPhones", "Rugged Phones"], "Feature Phones": ["Keypad Phones"], "Accessories": ["Chargers", "Power Banks", "Phone Cases", "Screen Protectors"] },
   "Cameras": { "Cameras": ["Digital Cameras", "DSLR Cameras", "Mirrorless Cameras"], "Video Equipment": ["Camcorders", "Action Cameras"], "Accessories": ["Tripods", "Lighting", "Microphones"] },
@@ -114,11 +114,8 @@ function escapeHtml(str) {
   });
 }
 
-// Generate a URL-friendly slug from a product name
 function generateSlug(name) {
-  return name.toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 // ==================== LOAD PRODUCTS FROM SUPABASE ====================
@@ -377,7 +374,6 @@ async function addToCartDB(product, selectedSize, selectedColor) {
     switchPage("account");
     return;
   }
-  // Get or create variant
   let variantId;
   const { data: variants } = await supabaseClient
     .from('product_variants')
@@ -393,7 +389,6 @@ async function addToCartDB(product, selectedSize, selectedColor) {
       .select();
     variantId = newVariant[0].id;
   }
-  // Get or create cart
   let { data: cartRecord } = await supabaseClient
     .from('carts')
     .select('id')
@@ -406,7 +401,6 @@ async function addToCartDB(product, selectedSize, selectedColor) {
       .select();
     cartRecord = newCart[0];
   }
-  // Add item
   const { data: existing } = await supabaseClient
     .from('cart_items')
     .select('id, quantity')
@@ -511,7 +505,6 @@ async function checkout() {
         price: item.price
       });
     }
-    // Clear cart from DB
     const { data: cartRecord } = await supabaseClient
       .from('carts')
       .select('id')
@@ -534,14 +527,17 @@ async function checkout() {
     orders.push(order);
     localStorage.setItem('orders', JSON.stringify(orders));
   }
+  const itemsForMsg = [...cart];
   cart = [];
   localStorage.setItem('cart', JSON.stringify(cart));
   updateCartCount();
   renderCart();
   let whatsappMsg = `I need to pay my order%0A%0AProduct Name | Color | Size | Qty | Price%0A----------------------------------------%0A`;
-  // Note: cart is empty now, so message will be empty. Move this before clearing if needed.
-  // For simplicity, we'll reconstruct the message from the items we just processed.
-  // I'll fix this by storing items temporarily.
+  itemsForMsg.forEach(item => {
+    whatsappMsg += `${escapeHtml(item.name)} | ${escapeHtml(item.color)} | ${escapeHtml(item.size)} | 1 | $${item.price.toFixed(2)}%0A`;
+  });
+  whatsappMsg += `----------------------------------------%0ATotal: $${total.toFixed(2)}%0ATracking Code: ${trackingCode}`;
+  window.open(`https://wa.me/263776871711?text=${whatsappMsg}`);
   alert(`Order placed! Tracking code: ${trackingCode}\nWhatsApp message sent to admin.`);
   switchPage("home");
 }
@@ -715,6 +711,7 @@ function resetFilters() {
 
 function loadMenu() {
   const menuDiv = document.getElementById("mainMenu");
+  if (!menuDiv) return;
   menuDiv.innerHTML = "";
   const categories = Object.keys(categoryHierarchy);
   categories.forEach(cat => {
@@ -726,6 +723,7 @@ function loadMenu() {
 function selectMainCategory(category) {
   lastClickedMainCat = category;
   const subMenuDiv = document.getElementById("subMenu");
+  if (!subMenuDiv) return;
   subMenuDiv.innerHTML = "";
   const subcats = categoryHierarchy[category];
   if (subcats) {
@@ -1624,7 +1622,6 @@ function addShareButton() {
 function shareProduct() {
   if (!currentProduct) return;
   const productId = currentProduct.slug || currentProduct.id;
-  // Use the Edge Function to generate rich preview
   const shareUrl = `https://proljdccjrifqgbmsyco.supabase.co/functions/v1/smooth-processor?p=${encodeURIComponent(productId)}`;
   if (navigator.share) {
     navigator.share({ title: currentProduct.name, url: shareUrl });
@@ -1639,7 +1636,6 @@ function updateProductURLAndMeta(product) {
   const slug = product.slug || product.id;
   const newUrl = `${window.location.pathname}?product=${encodeURIComponent(slug)}`;
   window.history.pushState({ product: slug }, '', newUrl);
-  // Update meta tags
   let metaTitle = document.querySelector('meta[property="og:title"]');
   let metaDesc = document.querySelector('meta[property="og:description"]');
   let metaImage = document.querySelector('meta[property="og:image"]');
