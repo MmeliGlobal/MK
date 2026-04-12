@@ -497,3 +497,43 @@ button:hover {
   font-size: 22px;
   margin-bottom: 4px;
 }
+/* Bottom navigation icons – brand colours */
+.bottom-nav div i {
+  color: #d4af37;  /* gold */
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+.bottom-nav div span {
+  color: #0a192f;  /* navy */
+  font-size: 12px;
+  font-weight: 500;
+}
+.bottom-nav {
+  background-color: #f8f9fa; /* light background – change if you want */
+  border-top: 2px solid #d4af37;
+}
+/* Cart icon style */
+.cart-icon i {
+  font-size: 24px;
+  color: white;
+  margin-right: 6px;
+}
+.cart-icon {
+  background: #e67e22;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 30px;
+}
+/* Footer (bottom nav) background – match header */
+.bottom-nav {
+  background: #0a192f;  /* navy like header */
+  border-top: none;
+}
+.bottom-nav div span {
+  color: #d4af37;
+}
+.bottom-nav div i {
+  color: #d4af37;
+}
