@@ -486,3 +486,14 @@ button:hover {
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
+.bottom-nav div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 12px;
+  cursor: pointer;
+}
+.bottom-nav i {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
