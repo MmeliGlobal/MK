@@ -1144,6 +1144,7 @@ async function addProduct() {
   let subImages = extraImages ? extraImages.split(',').map(url => url.trim()).filter(u => u) : [];
   const newProduct = {
     name: name,
+    slug: name. toLowerCase().replace(/[^a-z0-9]+/g, '-')
     desc: desc || "Added by admin",
     cat: category,
     subcat: subcategory,
