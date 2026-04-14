@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta property="og:title" content="Mmeli Global | Premium Products" />
+  <meta property="og:description" content="Shop premium products, track shipments, get quotations, and manage your account." />
+  <meta property="og:image" content="https://mmeliglobal.com/socialmedia.PNG" />
+  <meta property="og:url" content="https://mmeliglobal.com/" />
+  <title>Mmeli Global | Premium Products</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo-area" id="logoArea">
+    <img src="https://via.placeholder.com/200x50?text=Mmeli+Global" alt="Mmeli Global Logo" class="logo-image">
+    <span class="logo-text">Mmeli Global</span>
+  </div>
+  <div class="cart-icon" onclick="switchPage('cart')">
+    <i class="fas fa-shopping-cart"></i> <span id="cartCount">0</span>
+  </div>
+</header>
+
+<div class="search-bar">
+  <div class="search-wrapper">
+    <input type="text" id="searchInput" placeholder="Search products..." onkeyup="searchProducts()">
+    <label for="scanInput"><i class="fas fa-camera"></i></label>
+    <input type="file" id="scanInput" hidden accept="image/*">
+  </div>
+</div>
+<div class="golden-line"></div>
+
+<div id="mainMenu" class="main-menu"></div>
+<div id="subMenu" class="sub-menu"></div>
+
+<!-- PAGES -->
+<section id="home" class="page active">
+  <div class="filter-bar">
+    <select id="categoryFilter" onchange="filterProducts()"><option value="all">All Categories</option></select>
+    <select id="subcategoryFilter" onchange="filterProducts()"><option value="all">All Subcategories</option></select>
+    <input type="number" id="minPrice" placeholder="Min Price" onchange="filterProducts()">
+    <input type="number" id="maxPrice" placeholder="Max Price" onchange="filterProducts()">
+    <button onclick="resetFilters()"><i class="fas fa-undo-alt"></i> Reset</button>
+  </div>
+  <div id="productsContainer"></div>
+</section>
+
+<section id="productPage" class="page">
+  <div class="product-detail">
+    <div class="product-actions">
+      <button class="back-btn-transparent" onclick="switchPage('home')"><i class="fas fa-arrow-left"></i></button>
+      <button class="download-btn-transparent" onclick="downloadImage()"><i class="fas fa-download"></i></button>
+      <button id="shareProductBtn" class="download-btn-transparent" onclick="shareProduct()"><i class="fas fa-share-alt"></i></button>
+    </div>
+    <img id="mainImage" class="main-img" alt="Main product">
+    <div id="subImages" class="sub-images"></div>
+    <div class="product-header">
+      <h3 id="pName"></h3>
+      <span class="price" id="pPrice"></span>
+    </div>
+    <div class="product-options">
+      <div class="color-selector"><label>🎨 Color:</label><select id="colorSelect" class="color-select"></select></div>
+      <select id="sizeSelect" class="size-select"></select>
+    </div>
+    <div class="description" id="pDesc"></div>
+    <button class="add-to-cart-btn" onclick="addToCart()"><i class="fas fa-cart-plus"></i> Add to Cart</button>
+  </div>
+  <div id="productRecommend" class="recommendations"></div>
+</section>
+
+<section id="cart" class="page"><div id="cartList"></div><button onclick="checkout()"><i class="fas fa-credit-card"></i> Proceed to Checkout</button><div id="cartRecommend" class="recommendations"></div></section>
+
+<section id="tracking" class="page">
+  <div id="map"></div>
+  <div class="tracking-box">
+    <input id="trackCode" placeholder="Tracking Code"><input id="phoneLast4" placeholder="Last 4 digits">
+    <button onclick="trackNow()"><i class="fas fa-search"></i> Track</button>
+  </div>
+  <div id="shipmentHistory"></div>
+  <div id="trackingRecommend" class="recommendations"></div>
+</section>
+
+<section id="chat" class="page">
+  <button onclick="sendMsg('I need product info')"><i class="fab fa-whatsapp"></i> Product Info</button>
+  <button onclick="sendMsg('Shipping cost?')"><i class="fab fa-whatsapp"></i> Shipping Cost</button>
+  <button onclick="sendMsg('Delivery time?')"><i class="fab fa-whatsapp"></i> Delivery Time</button>
+  <div id="chatRecommend" class="recommendations"></div>
+</section>
+
+<section id="promo" class="page"><div id="promoList"></div><div id="promoProducts"></div><div id="promoRecommend" class="recommendations"></div></section>
+
+<section id="account" class="page">
+  <div id="loginBox"><input id="name" placeholder="Name"><input id="surname" placeholder="Surname"><input id="phone" placeholder="Phone"><input id="address" placeholder="Shipping Address"><button onclick="login()"><i class="fas fa-sign-in-alt"></i> Sign In</button></div>
+  <div id="dashboard" style="display:none;"><h3 id="userInfo"></h3><div onclick="viewMyQuotations()"><i class="fas fa-file-invoice-dollar"></i> My Quotations</div><div onclick="viewMyOrders()"><i class="fas fa-boxes"></i> My Orders</div><div onclick="switchPage('tracking')"><i class="fas fa-truck"></i> Tracking</div><div onclick="showSettings()"><i class="fas fa-cog"></i> Settings</div><div id="adminEntry" style="color:#e67e22; margin-top:20px;"><i class="fas fa-lock"></i> Admin Portal</div></div>
+  <div id="myQuotations" style="display:none;"><div class="back-button-bar"><button onclick="closeQuotations()"><i class="fas fa-arrow-left"></i> Back</button></div><h3>My Quotations</h3><div id="quotationsList"></div></div>
+  <div id="myOrders" style="display:none;"><div class="back-button-bar"><button onclick="closeOrders()"><i class="fas fa-arrow-left"></i> Back</button></div><h3>My Orders</h3><div id="ordersList"></div></div>
+  <div id="settingsForm" style="display:none;"><div class="back-button-bar"><button onclick="closeSettings()"><i class="fas fa-arrow-left"></i> Back</button></div><h3>Edit Profile</h3><input type="text" id="editName" placeholder="Name"><input type="text" id="editSurname" placeholder="Surname"><input type="text" id="editPhone" placeholder="Phone"><input type="text" id="editAddress" placeholder="Address"><button onclick="saveProfile()"><i class="fas fa-save"></i> Save Changes</button><button onclick="logout()" style="background:#999;"><i class="fas fa-sign-out-alt"></i> Logout</button></div>
+  <div id="accountRecommend" class="recommendations"></div>
+</section>
+
+<!-- ADMIN PAGES -->
+<section id="adminDashboard" class="page">
+  <div id="adminLogin" style="text-align:center; padding:20px;"><h3>Admin Login</h3><input type="text" id="adminUser" placeholder="Username" style="display:block; width:80%; margin:10px auto;"><input type="password" id="adminPass" placeholder="Password" style="display:block; width:80%; margin:10px auto;"><button onclick="adminLogin()"><i class="fas fa-key"></i> Login</button></div>
+  <div id="adminPanel" style="display:none;"><h3><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h3><div class="admin-cards"><div class="admin-card" onclick="switchPage('adminOrdersPage')"><i class="fas fa-box"></i><h4>Orders</h4><div id="adminOrdersSummary" class="card-summary"></div></div><div class="admin-card" onclick="switchPage('adminProductsPage')"><i class="fas fa-tags"></i><h4>Products</h4><div id="adminProductsSummary" class="card-summary"></div></div><div class="admin-card" onclick="switchPage('adminAddProductPage')"><i class="fas fa-plus-circle"></i><h4>Add New Product</h4></div><div class="admin-card" onclick="switchPage('adminQuotesPage')"><i class="fas fa-file-invoice-dollar"></i><h4>Create Quotation</h4></div><div class="admin-card" onclick="switchPage('adminInventoryPage')"><i class="fas fa-warehouse"></i><h4>Inventory</h4></div><div class="admin-card" onclick="switchPage('adminDiscountsPage')"><i class="fas fa-ticket-alt"></i><h4>Discounts</h4></div><div class="admin-card" onclick="switchPage('adminUsersPage')"><i class="fas fa-users"></i><h4>Users</h4></div><div class="admin-card" onclick="switchPage('adminAnalyticsPage')"><i class="fas fa-chart-line"></i><h4>Analytics</h4></div><div class="admin-card" onclick="switchPage('adminShippingPage')"><i class="fas fa-shipping-fast"></i><h4>Add Shipping</h4></div></div></div>
+</section>
+
+<section id="adminOrdersPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Orders Management</h3><div id="adminOrdersFull"></div></section>
+<section id="adminProductsPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Product List</h3><div id="adminProductsFull"></div></section>
+<section id="adminAddProductPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Add / Edit Product</h3><input type="text" id="newName" placeholder="Name"><input type="text" id="newPrice" placeholder="Price"><input type="text" id="newImage" placeholder="Main Image URL"><input type="text" id="newExtraImages" placeholder="Extra images (comma separated)"><textarea id="newDesc" placeholder="Description"></textarea><input type="text" id="newCategory" placeholder="Category"><input type="text" id="newSubcategory" placeholder="Subcategory"><input type="text" id="newColor" placeholder="Colors (comma separated)"><input type="text" id="newSize" placeholder="Size options (e.g., 'S:20, M:25')"><button onclick="addProduct()"><i class="fas fa-plus"></i> Add Product</button></section>
+
+<section id="adminQuotesPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Create Quotation</h3><div id="quotationForm"><input type="text" id="quoteClientName" placeholder="Client Name"><input type="text" id="quoteClientPhone" placeholder="Client Phone"><input type="text" id="quoteClientAddress" placeholder="Client Address"><div id="quoteItemsContainer"><div class="quote-item-row"><input type="text" class="item-desc" placeholder="Description" style="width:40%"><input type="number" class="item-qty" placeholder="Qty" value="1" style="width:15%"><input type="number" class="item-price" placeholder="Unit Price" style="width:20%"><span class="item-subtotal">0.00</span><button type="button" class="remove-item">✖</button></div></div><button type="button" id="addItemBtn"><i class="fas fa-plus"></i> Add Item</button><div><label>Discount %</label><input type="number" id="discountPercent" value="0"></div><div><label>Tax %</label><input type="number" id="taxPercent" value="0"></div><div id="quoteTotals"><p>Subtotal: $<span id="subtotal">0.00</span></p><p>Total: $<span id="totalAmount">0.00</span></p></div><button onclick="generateQuote()"><i class="fas fa-file-pdf"></i> Generate Quote</button></div></section>
+
+<section id="adminInventoryPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Inventory Management</h3><div id="inventoryList"></div></section>
+<section id="adminDiscountsPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Discounts & Coupons</h3><div id="discountsList"></div></section>
+<section id="adminUsersPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>User Management</h3><div id="usersList"></div></section>
+<section id="adminAnalyticsPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Sales Analytics</h3><div id="analyticsContent"></div></section>
+<section id="adminShippingPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Create Shipment</h3><div class="shipping-form"><input type="text" id="shipClientName" placeholder="Client Name"><input type="text" id="shipClientPhone" placeholder="Client Phone"><input type="text" id="shipTrackingCode" placeholder="Tracking Code (auto)"><textarea id="shipNotes" placeholder="Notes"></textarea><button onclick="saveShipment()"><i class="fas fa-save"></i> Save Shipment</button></div><div id="pendingShipmentsList" style="margin-top:20px;"><h3>Pending Shipments</h3><div id="pendingShipments"></div></div></section>
+
+<div id="quoteModal" class="modal" style="display:none;"><div class="modal-content"><div class="modal-header"><h3>Quote Preview</h3><span class="close-modal" onclick="closeQuoteModal()">&times;</span></div><div id="quotePreview" class="quote-preview"></div><div class="modal-footer"><button onclick="printQuote()"><i class="fas fa-print"></i> Print / Save PDF</button><button onclick="closeQuoteModal()"><i class="fas fa-times"></i> Close</button></div></div></div>
+
+<nav class="bottom-nav">
+  <div onclick="resetHome()"><i class="fas fa-home"></i><span>Home</span></div>
+  <div onclick="switchPage('tracking')"><i class="fas fa-truck"></i><span>Track</span></div>
+  <div onclick="switchPage('chat')"><i class="fab fa-whatsapp"></i><span>Chat</span></div>
+  <div onclick="switchPage('promo')"><i class="fas fa-fire"></i><span>Promos</span></div>
+  <div onclick="switchPage('account')"><i class="fas fa-user"></i><span>Account</span></div>
+</nav>
+
+<script src="script.js"></script>
+</body>
+</html>
