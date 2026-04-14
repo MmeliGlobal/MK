@@ -3,22 +3,89 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <meta property="og:title" content="Mmeli Global | Premium Products" />
-  <meta property="og:description" content="Shop premium products, track shipments, get quotations, and manage your account." />
-  <meta property="og:image" content="https://mmeliglobal.com/socialmedia.PNG" />
-  <meta property="og:url" content="https://mmeliglobal.com/" />
   <title>Mmeli Global | Premium Products</title>
+  <!-- Font Awesome & Leaflet -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ========== RESET & GLOBAL ========== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; padding-bottom: 70px; }
+    :root { --navy: #0a192f; --gold: #d4af37; --deep-orange: #e67e22; --card-bg: #ffffff; }
+    /* ========== HEADER & NAV ========== */
+    .header { background: var(--navy); color: white; display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; position: sticky; top: 0; z-index: 100; }
+    .logo-area { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .logo-image { height: 50px; width: auto; max-width: 180px; object-fit: contain; }
+    .logo-text { font-size: 1.4rem; font-weight: bold; background: linear-gradient(135deg, var(--gold), var(--deep-orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .cart-icon { font-size: 24px; cursor: pointer; background: var(--deep-orange); padding: 6px 12px; border-radius: 30px; display: flex; align-items: center; gap: 6px; }
+    .cart-icon span { font-size: 16px; background: white; color: var(--navy); border-radius: 20px; padding: 0 6px; font-weight: bold; }
+    .search-bar { padding: 12px 16px; background: white; border-bottom: 2px solid var(--gold); }
+    .search-wrapper { display: flex; align-items: center; background: #f1f3f5; border-radius: 40px; padding: 8px 16px; }
+    .search-wrapper input { flex: 1; border: none; background: transparent; outline: none; font-size: 16px; }
+    .search-wrapper label { font-size: 22px; cursor: pointer; margin-left: 8px; }
+    .golden-line { height: 3px; background: linear-gradient(90deg, var(--gold), var(--deep-orange)); }
+    .main-menu, .sub-menu { display: flex; overflow-x: auto; background: white; padding: 12px 16px; gap: 12px; border-bottom: 1px solid #eee; }
+    .main-menu div, .sub-menu div { cursor: pointer; white-space: nowrap; padding: 6px 16px; background: #f1f3f5; border-radius: 30px; font-size: 14px; font-weight: 500; transition: 0.2s; }
+    .main-menu div:hover, .sub-menu div:hover { background: var(--gold); color: var(--navy); }
+    .sub-menu div { display: flex; flex-direction: column; align-items: center; background: transparent; }
+    .sub-menu img { width: 32px; height: 32px; margin-bottom: 4px; }
+    /* ========== PAGES ========== */
+    .page { display: none; padding: 16px; }
+    .page.active { display: block; }
+    /* ========== FILTERS & PRODUCTS ========== */
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; background: white; padding: 12px; border-radius: 16px; }
+    .filter-bar select, .filter-bar input { padding: 8px; border-radius: 30px; border: 1px solid #ddd; }
+    .filter-bar button { background: var(--navy); color: white; padding: 8px 16px; border-radius: 30px; border: none; cursor: pointer; }
+    #productsContainer { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .product-card { background: var(--card-bg); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s; }
+    .product-card:hover { transform: translateY(-4px); }
+    .product-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+    .product-info { padding: 12px; text-align: center; }
+    .product-name { font-weight: bold; }
+    .product-price { color: var(--deep-orange); font-weight: bold; }
+    /* ========== PRODUCT DETAIL ========== */
+    .product-detail { background: var(--card-bg); border-radius: 20px; padding: 20px; }
+    .main-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 16px; }
+    .sub-images { display: flex; gap: 12px; margin: 16px 0; overflow-x: auto; }
+    .sub-images img { width: 70px; height: 70px; object-fit: cover; cursor: pointer; border: 2px solid transparent; border-radius: 8px; }
+    .sub-images img.active { border-color: var(--gold); }
+    .product-header { display: flex; justify-content: space-between; margin: 16px 0; }
+    .product-options { display: flex; gap: 12px; margin: 12px 0; }
+    .add-to-cart-btn { background: var(--deep-orange); color: white; border: none; padding: 14px; width: 100%; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 12px; }
+    .product-actions { display: flex; gap: 12px; margin-bottom: 12px; }
+    .back-btn-transparent, .download-btn-transparent { background: transparent; border: none; font-size: 28px; color: #888; cursor: pointer; }
+    /* ========== CART ========== */
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+    /* ========== BOTTOM NAV ========== */
+    .bottom-nav { position: fixed; bottom: 0; width: 100%; display: flex; justify-content: space-around; background: var(--navy); padding: 10px 0; z-index: 100; }
+    .bottom-nav div { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+    .bottom-nav i { font-size: 24px; color: var(--gold); margin-bottom: 4px; }
+    .bottom-nav span { font-size: 12px; color: var(--gold); }
+    /* ========== ADMIN ========== */
+    .admin-cards { display: flex; flex-direction: column; gap: 16px; }
+    .admin-card { display: flex; align-items: center; gap: 12px; background: white; border-radius: 16px; padding: 12px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .admin-card i { font-size: 28px; color: var(--deep-orange); }
+    /* ========== MODAL ========== */
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; width: 90%; max-width: 800px; max-height: 90%; overflow: auto; border-radius: 12px; padding: 20px; }
+    .quote-item-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+    /* ========== OTHER ========== */
+    button, input, select, textarea { padding: 8px 12px; border-radius: 30px; border: 1px solid #ddd; }
+    button { background: var(--deep-orange); color: white; border: none; cursor: pointer; }
+    #map { height: 200px; border-radius: 16px; margin-bottom: 16px; background: #e9ecef; }
+    .tracking-box, #shipmentHistory { background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    .recommend-grid { display: flex; gap: 12px; overflow-x: auto; }
+    .recommend-card { min-width: 140px; background: white; border-radius: 12px; padding: 8px; cursor: pointer; }
+  </style>
 </head>
 <body>
 
 <header class="header">
   <div class="logo-area" id="logoArea">
-    <img src="https://via.placeholder.com/200x50?text=Mmeli+Global" alt="Mmeli Global Logo" class="logo-image">
+    <img src="https://via.placeholder.com/200x50?text=Mmeli+Global" alt="Logo" class="logo-image">
     <span class="logo-text">Mmeli Global</span>
   </div>
   <div class="cart-icon" onclick="switchPage('cart')">
@@ -38,7 +105,7 @@
 <div id="mainMenu" class="main-menu"></div>
 <div id="subMenu" class="sub-menu"></div>
 
-<!-- PAGES -->
+<!-- HOME -->
 <section id="home" class="page active">
   <div class="filter-bar">
     <select id="categoryFilter" onchange="filterProducts()"><option value="all">All Categories</option></select>
@@ -50,22 +117,20 @@
   <div id="productsContainer"></div>
 </section>
 
+<!-- PRODUCT PAGE -->
 <section id="productPage" class="page">
   <div class="product-detail">
     <div class="product-actions">
       <button class="back-btn-transparent" onclick="switchPage('home')"><i class="fas fa-arrow-left"></i></button>
       <button class="download-btn-transparent" onclick="downloadImage()"><i class="fas fa-download"></i></button>
-      <button id="shareProductBtn" class="download-btn-transparent" onclick="shareProduct()"><i class="fas fa-share-alt"></i></button>
+      <button class="download-btn-transparent" onclick="shareProduct()"><i class="fas fa-share-alt"></i></button>
     </div>
-    <img id="mainImage" class="main-img" alt="Main product">
+    <img id="mainImage" class="main-img">
     <div id="subImages" class="sub-images"></div>
-    <div class="product-header">
-      <h3 id="pName"></h3>
-      <span class="price" id="pPrice"></span>
-    </div>
+    <div class="product-header"><h3 id="pName"></h3><span class="price" id="pPrice"></span></div>
     <div class="product-options">
-      <div class="color-selector"><label>🎨 Color:</label><select id="colorSelect" class="color-select"></select></div>
-      <select id="sizeSelect" class="size-select"></select>
+      <div class="color-selector"><label>🎨 Color:</label><select id="colorSelect"></select></div>
+      <select id="sizeSelect"></select>
     </div>
     <div class="description" id="pDesc"></div>
     <button class="add-to-cart-btn" onclick="addToCart()"><i class="fas fa-cart-plus"></i> Add to Cart</button>
@@ -73,8 +138,10 @@
   <div id="productRecommend" class="recommendations"></div>
 </section>
 
-<section id="cart" class="page"><div id="cartList"></div><button onclick="checkout()"><i class="fas fa-credit-card"></i> Proceed to Checkout</button><div id="cartRecommend" class="recommendations"></div></section>
+<!-- CART -->
+<section id="cart" class="page"><div id="cartList"></div><button onclick="checkout()">Proceed to Checkout</button><div id="cartRecommend" class="recommendations"></div></section>
 
+<!-- TRACKING -->
 <section id="tracking" class="page">
   <div id="map"></div>
   <div class="tracking-box">
@@ -85,6 +152,7 @@
   <div id="trackingRecommend" class="recommendations"></div>
 </section>
 
+<!-- CHAT -->
 <section id="chat" class="page">
   <button onclick="sendMsg('I need product info')"><i class="fab fa-whatsapp"></i> Product Info</button>
   <button onclick="sendMsg('Shipping cost?')"><i class="fab fa-whatsapp"></i> Shipping Cost</button>
@@ -92,36 +160,34 @@
   <div id="chatRecommend" class="recommendations"></div>
 </section>
 
+<!-- PROMO -->
 <section id="promo" class="page"><div id="promoList"></div><div id="promoProducts"></div><div id="promoRecommend" class="recommendations"></div></section>
 
+<!-- ACCOUNT -->
 <section id="account" class="page">
-  <div id="loginBox"><input id="name" placeholder="Name"><input id="surname" placeholder="Surname"><input id="phone" placeholder="Phone"><input id="address" placeholder="Shipping Address"><button onclick="login()"><i class="fas fa-sign-in-alt"></i> Sign In</button></div>
-  <div id="dashboard" style="display:none;"><h3 id="userInfo"></h3><div onclick="viewMyQuotations()"><i class="fas fa-file-invoice-dollar"></i> My Quotations</div><div onclick="viewMyOrders()"><i class="fas fa-boxes"></i> My Orders</div><div onclick="switchPage('tracking')"><i class="fas fa-truck"></i> Tracking</div><div onclick="showSettings()"><i class="fas fa-cog"></i> Settings</div><div id="adminEntry" style="color:#e67e22; margin-top:20px;"><i class="fas fa-lock"></i> Admin Portal</div></div>
-  <div id="myQuotations" style="display:none;"><div class="back-button-bar"><button onclick="closeQuotations()"><i class="fas fa-arrow-left"></i> Back</button></div><h3>My Quotations</h3><div id="quotationsList"></div></div>
-  <div id="myOrders" style="display:none;"><div class="back-button-bar"><button onclick="closeOrders()"><i class="fas fa-arrow-left"></i> Back</button></div><h3>My Orders</h3><div id="ordersList"></div></div>
-  <div id="settingsForm" style="display:none;"><div class="back-button-bar"><button onclick="closeSettings()"><i class="fas fa-arrow-left"></i> Back</button></div><h3>Edit Profile</h3><input type="text" id="editName" placeholder="Name"><input type="text" id="editSurname" placeholder="Surname"><input type="text" id="editPhone" placeholder="Phone"><input type="text" id="editAddress" placeholder="Address"><button onclick="saveProfile()"><i class="fas fa-save"></i> Save Changes</button><button onclick="logout()" style="background:#999;"><i class="fas fa-sign-out-alt"></i> Logout</button></div>
+  <div id="loginBox"><input id="name" placeholder="Name"><input id="surname" placeholder="Surname"><input id="phone" placeholder="Phone"><input id="address" placeholder="Shipping Address"><button onclick="login()">Sign In</button></div>
+  <div id="dashboard" style="display:none;"><h3 id="userInfo"></h3><div onclick="viewMyQuotations()">My Quotations</div><div onclick="viewMyOrders()">My Orders</div><div onclick="switchPage('tracking')">Tracking</div><div onclick="showSettings()">Settings</div><div id="adminEntry" style="color:#e67e22; margin-top:20px;">Admin Portal</div></div>
+  <div id="myQuotations" style="display:none;"><button onclick="closeQuotations()">Back</button><h3>My Quotations</h3><div id="quotationsList"></div></div>
+  <div id="myOrders" style="display:none;"><button onclick="closeOrders()">Back</button><h3>My Orders</h3><div id="ordersList"></div></div>
+  <div id="settingsForm" style="display:none;"><button onclick="closeSettings()">Back</button><h3>Edit Profile</h3><input id="editName" placeholder="Name"><input id="editSurname" placeholder="Surname"><input id="editPhone" placeholder="Phone"><input id="editAddress" placeholder="Address"><button onclick="saveProfile()">Save Changes</button><button onclick="logout()">Logout</button></div>
   <div id="accountRecommend" class="recommendations"></div>
 </section>
 
-<!-- ADMIN PAGES -->
+<!-- ADMIN DASHBOARD -->
 <section id="adminDashboard" class="page">
-  <div id="adminLogin" style="text-align:center; padding:20px;"><h3>Admin Login</h3><input type="text" id="adminUser" placeholder="Username" style="display:block; width:80%; margin:10px auto;"><input type="password" id="adminPass" placeholder="Password" style="display:block; width:80%; margin:10px auto;"><button onclick="adminLogin()"><i class="fas fa-key"></i> Login</button></div>
-  <div id="adminPanel" style="display:none;"><h3><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h3><div class="admin-cards"><div class="admin-card" onclick="switchPage('adminOrdersPage')"><i class="fas fa-box"></i><h4>Orders</h4><div id="adminOrdersSummary" class="card-summary"></div></div><div class="admin-card" onclick="switchPage('adminProductsPage')"><i class="fas fa-tags"></i><h4>Products</h4><div id="adminProductsSummary" class="card-summary"></div></div><div class="admin-card" onclick="switchPage('adminAddProductPage')"><i class="fas fa-plus-circle"></i><h4>Add New Product</h4></div><div class="admin-card" onclick="switchPage('adminQuotesPage')"><i class="fas fa-file-invoice-dollar"></i><h4>Create Quotation</h4></div><div class="admin-card" onclick="switchPage('adminInventoryPage')"><i class="fas fa-warehouse"></i><h4>Inventory</h4></div><div class="admin-card" onclick="switchPage('adminDiscountsPage')"><i class="fas fa-ticket-alt"></i><h4>Discounts</h4></div><div class="admin-card" onclick="switchPage('adminUsersPage')"><i class="fas fa-users"></i><h4>Users</h4></div><div class="admin-card" onclick="switchPage('adminAnalyticsPage')"><i class="fas fa-chart-line"></i><h4>Analytics</h4></div><div class="admin-card" onclick="switchPage('adminShippingPage')"><i class="fas fa-shipping-fast"></i><h4>Add Shipping</h4></div></div></div>
+  <div id="adminLogin"><h3>Admin Login</h3><input type="text" id="adminUser" placeholder="Username"><input type="password" id="adminPass" placeholder="Password"><button onclick="adminLogin()">Login</button></div>
+  <div id="adminPanel" style="display:none;"><h3>Admin Dashboard</h3><div class="admin-cards"><div class="admin-card" onclick="switchPage('adminOrdersPage')"><i class="fas fa-box"></i><h4>Orders</h4><div id="adminOrdersSummary"></div></div><div class="admin-card" onclick="switchPage('adminProductsPage')"><i class="fas fa-tags"></i><h4>Products</h4><div id="adminProductsSummary"></div></div><div class="admin-card" onclick="switchPage('adminAddProductPage')"><i class="fas fa-plus-circle"></i><h4>Add Product</h4></div><div class="admin-card" onclick="switchPage('adminQuotesPage')"><i class="fas fa-file-invoice-dollar"></i><h4>Create Quotation</h4></div><div class="admin-card" onclick="switchPage('adminShippingPage')"><i class="fas fa-shipping-fast"></i><h4>Shipments</h4></div><div class="admin-card" onclick="switchPage('adminUsersPage')"><i class="fas fa-users"></i><h4>Users</h4></div><div class="admin-card" onclick="switchPage('adminAnalyticsPage')"><i class="fas fa-chart-line"></i><h4>Analytics</h4></div></div></div>
 </section>
 
-<section id="adminOrdersPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Orders Management</h3><div id="adminOrdersFull"></div></section>
-<section id="adminProductsPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Product List</h3><div id="adminProductsFull"></div></section>
-<section id="adminAddProductPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Add / Edit Product</h3><input type="text" id="newName" placeholder="Name"><input type="text" id="newPrice" placeholder="Price"><input type="text" id="newImage" placeholder="Main Image URL"><input type="text" id="newExtraImages" placeholder="Extra images (comma separated)"><textarea id="newDesc" placeholder="Description"></textarea><input type="text" id="newCategory" placeholder="Category"><input type="text" id="newSubcategory" placeholder="Subcategory"><input type="text" id="newColor" placeholder="Colors (comma separated)"><input type="text" id="newSize" placeholder="Size options (e.g., 'S:20, M:25')"><button onclick="addProduct()"><i class="fas fa-plus"></i> Add Product</button></section>
+<section id="adminOrdersPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Orders</h3><div id="adminOrdersFull"></div></section>
+<section id="adminProductsPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Products</h3><div id="adminProductsFull"></div></section>
+<section id="adminAddProductPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Add/Edit Product</h3><input id="newName" placeholder="Name"><input id="newPrice" placeholder="Price"><input id="newImage" placeholder="Main Image URL"><input id="newExtraImages" placeholder="Extra images (comma)"><textarea id="newDesc" placeholder="Description"></textarea><input id="newCategory" placeholder="Category"><input id="newSubcategory" placeholder="Subcategory"><input id="newColor" placeholder="Colors (comma)"><input id="newSize" placeholder="Size options (S:20, M:25)"><button onclick="addProduct()">Add Product</button></section>
+<section id="adminQuotesPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Create Quotation</h3><div><input id="quoteClientName" placeholder="Client Name"><input id="quoteClientPhone" placeholder="Client Phone"><input id="quoteClientAddress" placeholder="Client Address"><div id="quoteItemsContainer"><div class="quote-item-row"><input class="item-desc" placeholder="Description" style="width:40%"><input class="item-qty" placeholder="Qty" value="1" style="width:15%"><input class="item-price" placeholder="Unit Price" style="width:20%"><span class="item-subtotal">0.00</span><button class="remove-item" type="button">✖</button></div></div><button id="addItemBtn">Add Item</button><div><label>Discount %</label><input id="discountPercent" value="0"></div><div><label>Tax %</label><input id="taxPercent" value="0"></div><div id="quoteTotals"><p>Subtotal: $<span id="subtotal">0.00</span></p><p>Total: $<span id="totalAmount">0.00</span></p></div><button onclick="generateQuote()">Generate Quote</button></div></section>
+<section id="adminShippingPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Create Shipment</h3><input id="shipClientName" placeholder="Client Name"><input id="shipClientPhone" placeholder="Client Phone"><input id="shipTrackingCode" placeholder="Tracking Code (auto)"><textarea id="shipNotes" placeholder="Notes"></textarea><button onclick="saveShipment()">Save Shipment</button><div id="pendingShipmentsList" style="margin-top:20px;"><h3>Pending Shipments</h3><div id="pendingShipments"></div></div></section>
+<section id="adminUsersPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Users</h3><div id="usersList"></div></section>
+<section id="adminAnalyticsPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Analytics</h3><div id="analyticsContent"></div></section>
 
-<section id="adminQuotesPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Create Quotation</h3><div id="quotationForm"><input type="text" id="quoteClientName" placeholder="Client Name"><input type="text" id="quoteClientPhone" placeholder="Client Phone"><input type="text" id="quoteClientAddress" placeholder="Client Address"><div id="quoteItemsContainer"><div class="quote-item-row"><input type="text" class="item-desc" placeholder="Description" style="width:40%"><input type="number" class="item-qty" placeholder="Qty" value="1" style="width:15%"><input type="number" class="item-price" placeholder="Unit Price" style="width:20%"><span class="item-subtotal">0.00</span><button type="button" class="remove-item">✖</button></div></div><button type="button" id="addItemBtn"><i class="fas fa-plus"></i> Add Item</button><div><label>Discount %</label><input type="number" id="discountPercent" value="0"></div><div><label>Tax %</label><input type="number" id="taxPercent" value="0"></div><div id="quoteTotals"><p>Subtotal: $<span id="subtotal">0.00</span></p><p>Total: $<span id="totalAmount">0.00</span></p></div><button onclick="generateQuote()"><i class="fas fa-file-pdf"></i> Generate Quote</button></div></section>
-
-<section id="adminInventoryPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Inventory Management</h3><div id="inventoryList"></div></section>
-<section id="adminDiscountsPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Discounts & Coupons</h3><div id="discountsList"></div></section>
-<section id="adminUsersPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>User Management</h3><div id="usersList"></div></section>
-<section id="adminAnalyticsPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Sales Analytics</h3><div id="analyticsContent"></div></section>
-<section id="adminShippingPage" class="page"><div class="back-button-bar"><button onclick="switchPage('adminDashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button></div><h3>Create Shipment</h3><div class="shipping-form"><input type="text" id="shipClientName" placeholder="Client Name"><input type="text" id="shipClientPhone" placeholder="Client Phone"><input type="text" id="shipTrackingCode" placeholder="Tracking Code (auto)"><textarea id="shipNotes" placeholder="Notes"></textarea><button onclick="saveShipment()"><i class="fas fa-save"></i> Save Shipment</button></div><div id="pendingShipmentsList" style="margin-top:20px;"><h3>Pending Shipments</h3><div id="pendingShipments"></div></div></section>
-
-<div id="quoteModal" class="modal" style="display:none;"><div class="modal-content"><div class="modal-header"><h3>Quote Preview</h3><span class="close-modal" onclick="closeQuoteModal()">&times;</span></div><div id="quotePreview" class="quote-preview"></div><div class="modal-footer"><button onclick="printQuote()"><i class="fas fa-print"></i> Print / Save PDF</button><button onclick="closeQuoteModal()"><i class="fas fa-times"></i> Close</button></div></div></div>
+<div id="quoteModal" class="modal" style="display:none;"><div class="modal-content"><h3>Quote Preview</h3><div id="quotePreview"></div><button onclick="printQuote()">Print PDF</button><button onclick="closeQuoteModal()">Close</button></div></div>
 
 <nav class="bottom-nav">
   <div onclick="resetHome()"><i class="fas fa-home"></i><span>Home</span></div>
@@ -131,6 +197,529 @@
   <div onclick="switchPage('account')"><i class="fas fa-user"></i><span>Account</span></div>
 </nav>
 
-<script src="script.js"></script>
+<script>
+// ==================== SUPABASE INIT ====================
+const SUPABASE_URL = "https://ceyrltlpxfyfriwzfdqt.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_nsXB_KjMeLGBGWIqqYFJuA_CPPIAK2-";
+let supabase = null;
+let allProducts = [];
+let currentProduct = null;
+let cart = [];
+let loggedInUser = null;
+let isAdmin = false;
+
+// ==================== HELPER FUNCTIONS ====================
+function escapeHtml(str) { return str ? str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]) : ''; }
+function showAlert(msg) { alert(msg); }
+
+// ==================== PRODUCT DISPLAY ====================
+async function loadProducts() {
+  const { data, error } = await supabase.from('products').select('*').eq('is_active', true);
+  if (!error && data && data.length) {
+    allProducts = data.map(p => ({
+      id: p.id, name: p.name, desc: p.description, cat: p.cat, subcat: p.subcat,
+      price: p.price, colors: p.colors || ['Default'],
+      sizeOptions: p.size_options || [{ size: 'Standard', price: p.price }],
+      mainImage: p.images?.[0] || 'https://via.placeholder.com/300',
+      subImages: p.images?.slice(1) || []
+    }));
+  } else {
+    // Demo fallback
+    allProducts = [
+      { id: 1, name: "iPhone 16e", desc: "Latest iPhone", cat: "Phones", subcat: "Smartphones", price: 357, colors: ["Black"], sizeOptions: [{ size: "128GB", price: 357 }], mainImage: "https://i.imgur.com/9wBjqIU.jpeg", subImages: [] },
+      { id: 2, name: "Leather Tote", desc: "Premium bag", cat: "Fashion", subcat: "Women", price: 129, colors: ["Brown"], sizeOptions: [{ size: "One Size", price: 129 }], mainImage: "https://i.imgur.com/Z1aTPZl.jpeg", subImages: [] }
+    ];
+  }
+  displayHomeProducts(allProducts);
+  populateFilters();
+  setupCategoryMenu();
+}
+
+function displayHomeProducts(products) {
+  const container = document.getElementById("productsContainer");
+  if (!container) return;
+  container.innerHTML = "";
+  products.slice(0, 20).forEach(p => {
+    const card = document.createElement("div");
+    card.className = "product-card";
+    card.innerHTML = `<img src="${p.mainImage}" loading="lazy"><div class="product-info"><div class="product-name">${escapeHtml(p.name)}</div><div class="product-price">$${p.price}</div></div>`;
+    card.onclick = () => openProduct(p);
+    container.appendChild(card);
+  });
+}
+
+function openProduct(product) {
+  currentProduct = product;
+  document.getElementById("pName").innerText = product.name;
+  document.getElementById("pDesc").innerText = product.desc;
+  document.getElementById("pPrice").innerHTML = `$${product.price}`;
+  document.getElementById("mainImage").src = product.mainImage;
+  const colorSel = document.getElementById("colorSelect");
+  colorSel.innerHTML = product.colors.map(c => `<option>${escapeHtml(c)}</option>`).join('');
+  const subDiv = document.getElementById("subImages");
+  subDiv.innerHTML = "";
+  [product.mainImage, ...product.subImages].forEach((img, i) => {
+    const imgEl = document.createElement("img");
+    imgEl.src = img;
+    imgEl.onclick = () => { document.getElementById("mainImage").src = img; document.querySelectorAll(".sub-images img").forEach(x => x.classList.remove("active")); imgEl.classList.add("active"); };
+    if (i === 0) imgEl.classList.add("active");
+    subDiv.appendChild(imgEl);
+  });
+  const sizeSel = document.getElementById("sizeSelect");
+  sizeSel.innerHTML = product.sizeOptions.map(s => `<option value="${s.price}">${escapeHtml(s.size)} - $${s.price}</option>`).join('');
+  sizeSel.onchange = () => document.getElementById("pPrice").innerText = `$${sizeSel.value}`;
+  loadRecommendations(product);
+  switchPage("productPage");
+}
+
+function loadRecommendations(product) {
+  const recs = allProducts.filter(p => p.id !== product?.id).slice(0, 4);
+  const container = document.getElementById("productRecommend");
+  if (!container) return;
+  container.innerHTML = "<h4>You may also like</h4><div class='recommend-grid'></div>";
+  const grid = container.querySelector(".recommend-grid");
+  recs.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "recommend-card";
+    card.onclick = () => openProduct(p);
+    card.innerHTML = `<img src="${p.mainImage}" loading="lazy"><p>${escapeHtml(p.name)}<br><strong>$${p.price}</strong></p>`;
+    grid.appendChild(card);
+  });
+}
+
+// ==================== CART ====================
+async function loadCartFromDB() {
+  if (!loggedInUser) return;
+  const { data: cartRec } = await supabase.from('carts').select('id').eq('user_id', loggedInUser.id).maybeSingle();
+  if (!cartRec) return;
+  const { data: items } = await supabase.from('cart_items').select('*, product_variants(price, product_id, products(name, images))').eq('cart_id', cartRec.id);
+  if (items) {
+    cart = items.map(i => ({ id: i.product_variants.product_id, name: i.product_variants.products.name, price: i.product_variants.price, quantity: i.quantity, image: i.product_variants.products.images?.[0] || "", cart_item_id: i.id }));
+    updateCartCount(); renderCart();
+  }
+}
+
+async function addToCartDB(product) {
+  if (!loggedInUser) { showAlert("Sign in first"); switchPage("account"); return; }
+  let { data: variant } = await supabase.from('product_variants').select('id').eq('product_id', product.id).maybeSingle();
+  if (!variant) {
+    const { data: newVar } = await supabase.from('product_variants').insert({ product_id: product.id, sku: `SKU-${product.id}`, price: product.price }).select();
+    variant = newVar[0];
+  }
+  let { data: cartRec } = await supabase.from('carts').select('id').eq('user_id', loggedInUser.id).maybeSingle();
+  if (!cartRec) {
+    const { data: newCart } = await supabase.from('carts').insert({ user_id: loggedInUser.id }).select();
+    cartRec = newCart[0];
+  }
+  const { data: existing } = await supabase.from('cart_items').select('id, quantity').eq('cart_id', cartRec.id).eq('variant_id', variant.id).maybeSingle();
+  if (existing) await supabase.from('cart_items').update({ quantity: existing.quantity + 1 }).eq('id', existing.id);
+  else await supabase.from('cart_items').insert({ cart_id: cartRec.id, variant_id: variant.id, quantity: 1 });
+  await loadCartFromDB();
+  showAlert("Added to cart");
+}
+
+function addToCart() { if (currentProduct) addToCartDB(currentProduct); }
+
+async function removeFromCart(index) {
+  const item = cart[index];
+  if (item.cart_item_id) await supabase.from('cart_items').delete().eq('id', item.cart_item_id);
+  cart.splice(index, 1);
+  updateCartCount(); renderCart();
+}
+
+function updateCartCount() { document.getElementById("cartCount").innerText = cart.length; }
+
+function renderCart() {
+  const container = document.getElementById("cartList");
+  if (!container) return;
+  if (cart.length === 0) { container.innerHTML = "<p>Your cart is empty.</p>"; return; }
+  let html = "", total = 0;
+  cart.forEach((item, idx) => {
+    total += item.price;
+    html += `<div class="cart-item"><div><img src="${item.image}" width="40" style="border-radius:8px;"> ${escapeHtml(item.name)}</div><div>$${item.price} <button onclick="removeFromCart(${idx})">Remove</button></div></div>`;
+  });
+  html += `<div class="cart-item"><strong>Total: $${total.toFixed(2)}</strong></div>`;
+  container.innerHTML = html;
+}
+
+async function checkout() {
+  if (cart.length === 0) return showAlert("Cart empty");
+  if (!loggedInUser) return showAlert("Sign in first");
+  const total = cart.reduce((s, i) => s + i.price, 0);
+  const { data: order } = await supabase.from('orders').insert({ user_id: loggedInUser.id, status: 'pending', total_amount: total, shipping_address: {} }).select();
+  for (let item of cart) {
+    await supabase.from('order_items').insert({ order_id: order[0].id, product_name: item.name, quantity: 1, unit_price: item.price });
+  }
+  const { data: cartRec } = await supabase.from('carts').select('id').eq('user_id', loggedInUser.id).single();
+  if (cartRec) await supabase.from('cart_items').delete().eq('cart_id', cartRec.id);
+  cart = [];
+  updateCartCount(); renderCart();
+  window.open(`https://wa.me/263776871711?text=Order%20placed%20Total%20$${total}`);
+  showAlert("Order placed! WhatsApp sent.");
+  switchPage("home");
+}
+
+// ==================== USER AUTH ====================
+async function checkUser() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: profile } = await supabase.from('profiles').select('full_name, is_admin').eq('id', user.id).single();
+    loggedInUser = user;
+    isAdmin = profile?.is_admin || false;
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    document.getElementById("userInfo").innerHTML = profile?.full_name || user.email;
+    await loadCartFromDB();
+  } else {
+    loggedInUser = null; isAdmin = false;
+    document.getElementById("loginBox").style.display = "block";
+    document.getElementById("dashboard").style.display = "none";
+    cart = [];
+    updateCartCount(); renderCart();
+  }
+}
+
+async function login() {
+  const name = document.getElementById("name").value;
+  const surname = document.getElementById("surname").value;
+  const phone = document.getElementById("phone").value;
+  const address = document.getElementById("address").value;
+  if (!name || !surname || !phone) return showAlert("Fill all fields");
+  const email = `${phone}@temp.mmeli.com`;
+  const password = phone;
+  const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: `${name} ${surname}`, phone, address } } });
+  if (error) await supabase.auth.signInWithPassword({ email, password });
+  await checkUser();
+}
+
+function logout() { supabase.auth.signOut(); loggedInUser = null; cart = []; updateCartCount(); renderCart(); switchPage("account"); }
+
+// ==================== ADMIN FUNCTIONS ====================
+function adminLogin() {
+  const u = document.getElementById("adminUser").value, p = document.getElementById("adminPass").value;
+  if (u === "admin" && p === "admin123") {
+    document.getElementById("adminLogin").style.display = "none";
+    document.getElementById("adminPanel").style.display = "block";
+    loadAdminSummaries();
+  } else showAlert("Invalid credentials");
+}
+
+async function loadAdminSummaries() {
+  const { count: ordersCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+  document.getElementById("adminOrdersSummary").innerHTML = `${ordersCount || 0} orders`;
+  document.getElementById("adminProductsSummary").innerHTML = `${allProducts.length} products`;
+}
+
+async function loadOrdersFull() {
+  const { data } = await supabase.from('orders').select('*, profiles(full_name)');
+  const container = document.getElementById("adminOrdersFull");
+  if (!container) return;
+  if (data && data.length) {
+    container.innerHTML = data.map(o => `<div style="border-bottom:1px solid #ccc; padding:8px;"><strong>Order #${o.id}</strong> - ${o.status} - $${o.total_amount}<br>User: ${o.profiles?.full_name || 'Guest'}<button onclick="updateOrderStatus('${o.id}')" style="margin-left:10px;">Mark Shipped</button></div>`).join('');
+  } else container.innerHTML = "<p>No orders</p>";
+}
+
+async function updateOrderStatus(id) { await supabase.from('orders').update({ status: 'shipped' }).eq('id', id); loadOrdersFull(); }
+
+function loadProductsFull() {
+  const container = document.getElementById("adminProductsFull");
+  if (!container) return;
+  container.innerHTML = allProducts.map(p => `<div style="border-bottom:1px solid #ccc; padding:8px;"><strong>${escapeHtml(p.name)}</strong> - $${p.price}<br><button onclick="editProduct(${p.id})">Edit</button> <button onclick="deleteProduct(${p.id})">Delete</button></div>`).join('');
+}
+
+async function addProduct() {
+  const name = document.getElementById("newName").value.trim();
+  const price = parseFloat(document.getElementById("newPrice").value);
+  const image = document.getElementById("newImage").value.trim();
+  const cat = document.getElementById("newCategory").value.trim();
+  const subcat = document.getElementById("newSubcategory").value.trim();
+  if (!name || isNaN(price) || !image || !cat) return showAlert("Fill required fields");
+  const colors = document.getElementById("newColor").value.split(',').map(c => c.trim());
+  const extraImages = document.getElementById("newExtraImages").value.split(',').map(u => u.trim()).filter(u => u);
+  const sizeInput = document.getElementById("newSize").value;
+  let sizeOptions = [];
+  if (sizeInput) {
+    sizeInput.split(',').forEach(pair => {
+      let [s, p] = pair.split(':');
+      if (s && p) sizeOptions.push({ size: s.trim(), price: parseFloat(p) });
+    });
+  }
+  if (!sizeOptions.length) sizeOptions.push({ size: "Standard", price });
+  const newProduct = {
+    name, price, description: document.getElementById("newDesc").value,
+    cat, subcat, colors, size_options: sizeOptions,
+    images: [image, ...extraImages], is_active: true,
+    slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  };
+  const { data, error } = await supabase.from('products').insert(newProduct).select();
+  if (error) return showAlert("Error: " + error.message);
+  allProducts.push(data[0]);
+  displayHomeProducts(allProducts);
+  loadProductsFull();
+  showAlert("Product added");
+  clearProductForm();
+}
+
+async function deleteProduct(id) {
+  if (confirm("Delete product?")) {
+    await supabase.from('products').delete().eq('id', id);
+    allProducts = allProducts.filter(p => p.id != id);
+    displayHomeProducts(allProducts);
+    loadProductsFull();
+  }
+}
+
+function editProduct(id) {
+  const product = allProducts.find(p => p.id == id);
+  if (!product) return;
+  document.getElementById("newName").value = product.name;
+  document.getElementById("newPrice").value = product.price;
+  document.getElementById("newImage").value = product.mainImage;
+  document.getElementById("newExtraImages").value = product.subImages.join(", ");
+  document.getElementById("newDesc").value = product.desc;
+  document.getElementById("newCategory").value = product.cat;
+  document.getElementById("newSubcategory").value = product.subcat;
+  document.getElementById("newColor").value = product.colors.join(", ");
+  document.getElementById("newSize").value = product.sizeOptions.map(s => `${s.size}:${s.price}`).join(", ");
+  const btn = document.querySelector("#adminAddProductPage button");
+  btn.innerHTML = '<i class="fas fa-save"></i> Update Product';
+  btn.onclick = () => updateProduct(product.id);
+  switchPage("adminAddProductPage");
+}
+
+async function updateProduct(id) {
+  const name = document.getElementById("newName").value.trim();
+  const price = parseFloat(document.getElementById("newPrice").value);
+  const image = document.getElementById("newImage").value.trim();
+  const cat = document.getElementById("newCategory").value.trim();
+  const subcat = document.getElementById("newSubcategory").value.trim();
+  const colors = document.getElementById("newColor").value.split(',').map(c => c.trim());
+  const extraImages = document.getElementById("newExtraImages").value.split(',').map(u => u.trim()).filter(u => u);
+  const sizeInput = document.getElementById("newSize").value;
+  let sizeOptions = [];
+  if (sizeInput) {
+    sizeInput.split(',').forEach(pair => {
+      let [s, p] = pair.split(':');
+      if (s && p) sizeOptions.push({ size: s.trim(), price: parseFloat(p) });
+    });
+  }
+  if (!sizeOptions.length) sizeOptions.push({ size: "Standard", price });
+  const updated = { name, price, description: document.getElementById("newDesc").value, cat, subcat, colors, size_options: sizeOptions, images: [image, ...extraImages] };
+  await supabase.from('products').update(updated).eq('id', id);
+  await loadProducts();
+  loadProductsFull();
+  showAlert("Updated");
+  clearProductForm();
+}
+
+function clearProductForm() {
+  document.getElementById("newName").value = "";
+  document.getElementById("newPrice").value = "";
+  document.getElementById("newImage").value = "";
+  document.getElementById("newExtraImages").value = "";
+  document.getElementById("newDesc").value = "";
+  document.getElementById("newCategory").value = "";
+  document.getElementById("newSubcategory").value = "";
+  document.getElementById("newColor").value = "";
+  document.getElementById("newSize").value = "";
+  const btn = document.querySelector("#adminAddProductPage button");
+  btn.innerHTML = '<i class="fas fa-plus"></i> Add Product';
+  btn.onclick = () => addProduct();
+}
+
+async function loadUsers() {
+  const { data } = await supabase.from('profiles').select('*');
+  document.getElementById("usersList").innerHTML = data?.map(u => `<div>${escapeHtml(u.full_name)} - Admin: ${u.is_admin}</div>`).join('') || "No users";
+}
+
+async function loadAnalytics() {
+  const { data } = await supabase.from('orders').select('total_amount');
+  const total = data?.reduce((s, o) => s + o.total_amount, 0) || 0;
+  document.getElementById("analyticsContent").innerHTML = `<h4>Total Sales: $${total.toFixed(2)}</h4><p>Orders: ${data?.length || 0}</p>`;
+}
+
+// ==================== SHIPMENTS ====================
+async function saveShipment() {
+  const tracking = document.getElementById("shipTrackingCode").value.trim() || "MM" + Date.now();
+  const { error } = await supabase.from('shipments').insert({
+    tracking_code: tracking,
+    client_name: document.getElementById("shipClientName").value,
+    client_phone: document.getElementById("shipClientPhone").value,
+    status: 'pending',
+    notes: document.getElementById("shipNotes").value
+  });
+  if (error) showAlert("Error: " + error.message);
+  else { showAlert("Shipment saved"); loadShipments(); }
+}
+
+async function loadShipments() {
+  const { data } = await supabase.from('shipments').select('*');
+  const container = document.getElementById("pendingShipments");
+  if (container) container.innerHTML = data?.map(s => `<div class="shipment-card">${s.tracking_code} - ${s.client_name} - ${s.status}</div>`).join('');
+}
+
+async function trackNow() {
+  const code = document.getElementById("trackCode").value;
+  const { data } = await supabase.from('shipments').select('*').eq('tracking_code', code).maybeSingle();
+  if (data) document.getElementById("shipmentHistory").innerHTML = `<strong>Status:</strong> ${data.status}<br>Client: ${data.client_name}<br>Notes: ${data.notes}`;
+  else document.getElementById("shipmentHistory").innerHTML = "No shipment found.";
+}
+
+// ==================== QUOTATIONS ====================
+function addQuoteItemRow() {
+  const container = document.getElementById("quoteItemsContainer");
+  const div = document.createElement("div");
+  div.className = "quote-item-row";
+  div.innerHTML = `<input class="item-desc" placeholder="Description" style="width:40%"><input class="item-qty" placeholder="Qty" value="1" style="width:15%"><input class="item-price" placeholder="Unit Price" style="width:20%"><span class="item-subtotal">0.00</span><button class="remove-item" type="button">✖</button>`;
+  div.querySelector(".remove-item").onclick = () => div.remove();
+  container.appendChild(div);
+  document.querySelectorAll(".item-qty, .item-price").forEach(el => el.addEventListener("input", calculateQuoteTotals));
+}
+
+function calculateQuoteTotals() {
+  let subtotal = 0;
+  document.querySelectorAll(".quote-item-row").forEach(row => {
+    const qty = parseFloat(row.querySelector(".item-qty")?.value) || 0;
+    const price = parseFloat(row.querySelector(".item-price")?.value) || 0;
+    const sub = qty * price;
+    row.querySelector(".item-subtotal").innerText = sub.toFixed(2);
+    subtotal += sub;
+  });
+  const discount = parseFloat(document.getElementById("discountPercent").value) || 0;
+  const tax = parseFloat(document.getElementById("taxPercent").value) || 0;
+  const afterDisc = subtotal * (1 - discount / 100);
+  const total = afterDisc * (1 + tax / 100);
+  document.getElementById("subtotal").innerText = subtotal.toFixed(2);
+  document.getElementById("totalAmount").innerText = total.toFixed(2);
+}
+
+function generateQuote() {
+  const client = document.getElementById("quoteClientName").value;
+  const items = [];
+  document.querySelectorAll(".quote-item-row").forEach(row => {
+    items.push({ desc: row.querySelector(".item-desc").value, qty: row.querySelector(".item-qty").value, price: row.querySelector(".item-price").value });
+  });
+  const total = document.getElementById("totalAmount").innerText;
+  let html = `<h2>Quote for ${escapeHtml(client)}</h2><table border="1" cellpadding="5" style="width:100%"><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>`;
+  items.forEach(i => { html += `<tr><td>${escapeHtml(i.desc)}</td><td>${i.qty}</td><td>$${i.price}</td><td>$${(i.qty * i.price).toFixed(2)}</td></tr>`; });
+  html += `<tr><td colspan="3"><strong>Total</strong></td><td><strong>$${total}</strong></td></tr></table>`;
+  document.getElementById("quotePreview").innerHTML = html;
+  document.getElementById("quoteModal").style.display = "flex";
+}
+
+function closeQuoteModal() { document.getElementById("quoteModal").style.display = "none"; }
+function printQuote() { const content = document.getElementById("quotePreview").innerHTML; const win = window.open(); win.document.write(`<html><head><title>Quote</title></head><body>${content}</body></html>`); win.print(); }
+
+// ==================== FILTERS, MENU, NAVIGATION ====================
+function setupCategoryMenu() {
+  const menu = document.getElementById("mainMenu");
+  if (!menu) return;
+  const cats = [...new Set(allProducts.map(p => p.cat))];
+  menu.innerHTML = cats.map(cat => `<div onclick="selectMainCategory('${cat}')">${cat}</div>`).join('');
+}
+
+function selectMainCategory(cat) {
+  const subDiv = document.getElementById("subMenu");
+  const subcats = [...new Set(allProducts.filter(p => p.cat === cat).map(p => p.subcat))];
+  subDiv.innerHTML = subcats.map(sub => `<div onclick="filterBySubcategory('${sub}')"><img src="https://cdn-icons-png.flaticon.com/512/456/456212.png" width="32">${sub}</div>`).join('');
+}
+
+function filterBySubcategory(sub) { filterProducts(); }
+
+function populateFilters() {
+  const catSel = document.getElementById("categoryFilter");
+  const cats = [...new Set(allProducts.map(p => p.cat))];
+  catSel.innerHTML = '<option value="all">All Categories</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function filterProducts() {
+  let filtered = [...allProducts];
+  const cat = document.getElementById("categoryFilter").value;
+  if (cat !== "all") filtered = filtered.filter(p => p.cat === cat);
+  const min = parseFloat(document.getElementById("minPrice").value) || 0;
+  const max = parseFloat(document.getElementById("maxPrice").value) || Infinity;
+  filtered = filtered.filter(p => p.price >= min && p.price <= max);
+  displayHomeProducts(filtered);
+}
+
+function resetFilters() {
+  document.getElementById("categoryFilter").value = "all";
+  document.getElementById("minPrice").value = "";
+  document.getElementById("maxPrice").value = "";
+  filterProducts();
+}
+
+function searchProducts() {
+  const term = document.getElementById("searchInput").value.toLowerCase();
+  if (!term) return filterProducts();
+  const filtered = allProducts.filter(p => p.name.toLowerCase().includes(term));
+  displayHomeProducts(filtered);
+}
+
+function resetHome() { filterProducts(); switchPage("home"); }
+
+function switchPage(pageId) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  const target = document.getElementById(pageId);
+  if (target) target.classList.add("active");
+  if (pageId === "adminOrdersPage") loadOrdersFull();
+  if (pageId === "adminProductsPage") loadProductsFull();
+  if (pageId === "adminUsersPage") loadUsers();
+  if (pageId === "adminAnalyticsPage") loadAnalytics();
+  if (pageId === "adminShippingPage") loadShipments();
+  if (pageId === "cart") renderCart();
+  if (pageId === "tracking") initMap();
+}
+
+function initMap() {
+  if (typeof L !== 'undefined' && document.getElementById("map")) {
+    const map = L.map('map').setView([-17, 30], 5);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+    L.marker([-17, 30]).addTo(map).bindPopup('Mmeli Global').openPopup();
+  }
+}
+
+function sendMsg(msg) { window.open(`https://wa.me/263776871711?text=${encodeURIComponent(msg)}`); }
+function loadPromos() { document.getElementById("promoList").innerHTML = "<h3>🔥 Limited Time: 20% off all products! Use code MMELI20 🔥</h3>"; }
+function downloadImage() { const url = document.getElementById("mainImage").src; if (url) window.open(url); }
+function shareProduct() { if (currentProduct) alert("Share link: " + window.location.href + "?product=" + currentProduct.id); }
+function viewMyQuotations() { alert("Quotations will appear here after generation."); }
+function viewMyOrders() { alert("Check your orders in the admin panel."); }
+function showSettings() { document.getElementById("settingsForm").style.display = "block"; document.getElementById("dashboard").style.display = "none"; }
+function closeSettings() { document.getElementById("settingsForm").style.display = "none"; document.getElementById("dashboard").style.display = "block"; }
+function closeQuotations() { document.getElementById("myQuotations").style.display = "none"; document.getElementById("dashboard").style.display = "block"; }
+function closeOrders() { document.getElementById("myOrders").style.display = "none"; document.getElementById("dashboard").style.display = "block"; }
+function saveProfile() { showAlert("Profile updated (Supabase)."); closeSettings(); }
+
+function checkUrlForProduct() {
+  const params = new URLSearchParams(window.location.search);
+  const pid = params.get('product');
+  if (pid && allProducts.length) {
+    const prod = allProducts.find(p => p.id == pid);
+    if (prod) openProduct(prod);
+  }
+}
+
+// ==================== INIT ====================
+async function init() {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  await loadProducts();
+  await checkUser();
+  updateCartCount();
+  renderCart();
+  loadPromos();
+  initMap();
+  document.getElementById("addItemBtn")?.addEventListener("click", addQuoteItemRow);
+  document.getElementById("adminEntry")?.addEventListener("click", () => switchPage("adminDashboard"));
+  document.getElementById("logoArea")?.addEventListener("dblclick", () => switchPage("adminDashboard"));
+  document.getElementById("scanInput")?.addEventListener("change", () => showAlert("Scan feature coming soon"));
+  checkUrlForProduct();
+  // Add quote item row listeners for existing rows
+  document.querySelectorAll(".item-qty, .item-price").forEach(el => el.addEventListener("input", calculateQuoteTotals));
+  document.querySelectorAll(".remove-item").forEach(btn => btn.onclick = function() { this.closest('.quote-item-row')?.remove(); calculateQuoteTotals(); });
+}
+
+init();
+</script>
 </body>
 </html>
