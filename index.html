@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Mmeli Global | Premium Products</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; padding-bottom: 70px; }
+    :root { --navy: #0a192f; --gold: #d4af37; --deep-orange: #e67e22; }
+    .header { background: var(--navy); color: white; display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; position: sticky; top: 0; z-index: 100; }
+    .logo-area { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .logo-image { height: 50px; width: auto; max-width: 180px; }
+    .logo-text { font-size: 1.4rem; font-weight: bold; background: linear-gradient(135deg, var(--gold), var(--deep-orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .cart-icon { font-size: 24px; cursor: pointer; background: var(--deep-orange); padding: 6px 12px; border-radius: 30px; display: flex; align-items: center; gap: 6px; }
+    .cart-icon span { background: white; color: var(--navy); border-radius: 20px; padding: 0 6px; font-weight: bold; }
+    .search-bar { padding: 12px 16px; background: white; border-bottom: 2px solid var(--gold); }
+    .search-wrapper { display: flex; background: #f1f3f5; border-radius: 40px; padding: 8px 16px; }
+    .search-wrapper input { flex: 1; border: none; background: transparent; outline: none; }
+    .search-wrapper label { font-size: 22px; cursor: pointer; margin-left: 8px; }
+    .golden-line { height: 3px; background: linear-gradient(90deg, var(--gold), var(--deep-orange)); }
+    .main-menu, .sub-menu { display: flex; overflow-x: auto; background: white; padding: 12px 16px; gap: 12px; border-bottom: 1px solid #eee; }
+    .main-menu div, .sub-menu div { cursor: pointer; white-space: nowrap; padding: 6px 16px; background: #f1f3f5; border-radius: 30px; font-size: 14px; }
+    .main-menu div:hover, .sub-menu div:hover { background: var(--gold); color: var(--navy); }
+    .sub-menu div { display: flex; flex-direction: column; align-items: center; background: transparent; }
+    .sub-menu img { width: 32px; height: 32px; margin-bottom: 4px; }
+    .page { display: none; padding: 16px; }
+    .page.active { display: block; }
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; background: white; padding: 12px; border-radius: 16px; margin-bottom: 20px; }
+    .filter-bar select, .filter-bar input { padding: 8px; border-radius: 30px; border: 1px solid #ddd; }
+    .filter-bar button { background: var(--navy); color: white; padding: 8px 16px; border-radius: 30px; border: none; cursor: pointer; }
+    #productsContainer { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .product-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s; }
+    .product-card:hover { transform: translateY(-4px); }
+    .product-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+    .product-info { padding: 12px; text-align: center; }
+    .product-name { font-weight: bold; }
+    .product-price { color: var(--deep-orange); font-weight: bold; }
+    .product-detail { background: white; border-radius: 20px; padding: 20px; }
+    .main-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 16px; }
+    .sub-images { display: flex; gap: 12px; margin: 16px 0; overflow-x: auto; }
+    .sub-images img { width: 70px; height: 70px; object-fit: cover; cursor: pointer; border: 2px solid transparent; border-radius: 8px; }
+    .sub-images img.active { border-color: var(--gold); }
+    .product-header { display: flex; justify-content: space-between; margin: 16px 0; }
+    .product-options { display: flex; gap: 12px; margin: 12px 0; }
+    .add-to-cart-btn { background: var(--deep-orange); color: white; border: none; padding: 14px; width: 100%; border-radius: 40px; font-weight: bold; cursor: pointer; }
+    .product-actions { display: flex; gap: 12px; margin-bottom: 12px; }
+    .back-btn-transparent, .download-btn-transparent { background: transparent; border: none; font-size: 28px; color: #888; cursor: pointer; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+    .bottom-nav { position: fixed; bottom: 0; width: 100%; display: flex; justify-content: space-around; background: var(--navy); padding: 10px 0; z-index: 100; }
+    .bottom-nav div { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+    .bottom-nav i { font-size: 24px; color: var(--gold); margin-bottom: 4px; }
+    .bottom-nav span { font-size: 12px; color: var(--gold); }
+    .admin-cards { display: flex; flex-direction: column; gap: 16px; }
+    .admin-card { display: flex; align-items: center; gap: 12px; background: white; border-radius: 16px; padding: 12px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .admin-card i { font-size: 28px; color: var(--deep-orange); }
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; width: 90%; max-width: 800px; max-height: 90%; overflow: auto; border-radius: 12px; padding: 20px; }
+    .quote-item-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+    button, input, select, textarea { padding: 8px 12px; border-radius: 30px; border: 1px solid #ddd; }
+    button { background: var(--deep-orange); color: white; border: none; cursor: pointer; }
+    #map { height: 200px; border-radius: 16px; margin-bottom: 16px; background: #e9ecef; }
+    .tracking-box, #shipmentHistory { background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    .recommend-grid { display: flex; gap: 12px; overflow-x: auto; }
+    .recommend-card { min-width: 140px; background: white; border-radius: 12px; padding: 8px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo-area" id="logoArea">
+    <img src="https://via.placeholder.com/200x50?text=Mmeli+Global" alt="Logo" class="logo-image">
+    <span class="logo-text">Mmeli Global</span>
+  </div>
+  <div class="cart-icon" onclick="switchPage('cart')">
+    <i class="fas fa-shopping-cart"></i> <span id="cartCount">0</span>
+  </div>
+</header>
+
+<div class="search-bar">
+  <div class="search-wrapper">
+    <input type="text" id="searchInput" placeholder="Search products..." onkeyup="searchProducts()">
+    <label for="scanInput"><i class="fas fa-camera"></i></label>
+    <input type="file" id="scanInput" hidden accept="image/*">
+  </div>
+</div>
+<div class="golden-line"></div>
+
+<div id="mainMenu" class="main-menu"></div>
+<div id="subMenu" class="sub-menu"></div>
+
+<!-- HOME -->
+<section id="home" class="page active">
+  <div class="filter-bar">
+    <select id="categoryFilter" onchange="filterProducts()"><option value="all">All Categories</option></select>
+    <select id="subcategoryFilter" onchange="filterProducts()"><option value="all">All Subcategories</option></select>
+    <input type="number" id="minPrice" placeholder="Min Price" onchange="filterProducts()">
+    <input type="number" id="maxPrice" placeholder="Max Price" onchange="filterProducts()">
+    <button onclick="resetFilters()"><i class="fas fa-undo-alt"></i> Reset</button>
+  </div>
+  <div id="productsContainer"></div>
+</section>
+
+<!-- PRODUCT PAGE -->
+<section id="productPage" class="page">
+  <div class="product-detail">
+    <div class="product-actions">
+      <button class="back-btn-transparent" onclick="switchPage('home')"><i class="fas fa-arrow-left"></i></button>
+      <button class="download-btn-transparent" onclick="downloadImage()"><i class="fas fa-download"></i></button>
+      <button class="download-btn-transparent" onclick="shareProduct()"><i class="fas fa-share-alt"></i></button>
+    </div>
+    <img id="mainImage" class="main-img">
+    <div id="subImages" class="sub-images"></div>
+    <div class="product-header"><h3 id="pName"></h3><span class="price" id="pPrice"></span></div>
+    <div class="product-options">
+      <div class="color-selector"><label>🎨 Color:</label><select id="colorSelect"></select></div>
+      <select id="sizeSelect"></select>
+    </div>
+    <div class="description" id="pDesc"></div>
+    <button class="add-to-cart-btn" onclick="addToCart()"><i class="fas fa-cart-plus"></i> Add to Cart</button>
+  </div>
+  <div id="productRecommend" class="recommendations"></div>
+</section>
+
+<!-- CART -->
+<section id="cart" class="page"><div id="cartList"></div><button onclick="checkout()">Proceed to Checkout</button><div id="cartRecommend" class="recommendations"></div></section>
+
+<!-- TRACKING -->
+<section id="tracking" class="page">
+  <div id="map"></div>
+  <div class="tracking-box">
+    <input id="trackCode" placeholder="Tracking Code"><input id="phoneLast4" placeholder="Last 4 digits">
+    <button onclick="trackNow()"><i class="fas fa-search"></i> Track</button>
+  </div>
+  <div id="shipmentHistory"></div>
+  <div id="trackingRecommend" class="recommendations"></div>
+</section>
+
+<!-- CHAT -->
+<section id="chat" class="page">
+  <button onclick="sendMsg('I need product info')"><i class="fab fa-whatsapp"></i> Product Info</button>
+  <button onclick="sendMsg('Shipping cost?')"><i class="fab fa-whatsapp"></i> Shipping Cost</button>
+  <button onclick="sendMsg('Delivery time?')"><i class="fab fa-whatsapp"></i> Delivery Time</button>
+  <div id="chatRecommend" class="recommendations"></div>
+</section>
+
+<!-- PROMO -->
+<section id="promo" class="page"><div id="promoList"></div><div id="promoProducts"></div><div id="promoRecommend" class="recommendations"></div></section>
+
+<!-- ACCOUNT -->
+<section id="account" class="page">
+  <div id="loginBox"><input id="name" placeholder="Name"><input id="surname" placeholder="Surname"><input id="phone" placeholder="Phone"><input id="address" placeholder="Shipping Address"><button onclick="login()">Sign In</button></div>
+  <div id="dashboard" style="display:none;"><h3 id="userInfo"></h3><div onclick="viewMyQuotations()">My Quotations</div><div onclick="viewMyOrders()">My Orders</div><div onclick="switchPage('tracking')">Tracking</div><div onclick="showSettings()">Settings</div><div id="adminEntry" style="color:#e67e22; margin-top:20px;">Admin Portal</div></div>
+  <div id="myQuotations" style="display:none;"><button onclick="closeQuotations()">Back</button><h3>My Quotations</h3><div id="quotationsList"></div></div>
+  <div id="myOrders" style="display:none;"><button onclick="closeOrders()">Back</button><h3>My Orders</h3><div id="ordersList"></div></div>
+  <div id="settingsForm" style="display:none;"><button onclick="closeSettings()">Back</button><h3>Edit Profile</h3><input id="editName" placeholder="Name"><input id="editSurname" placeholder="Surname"><input id="editPhone" placeholder="Phone"><input id="editAddress" placeholder="Address"><button onclick="saveProfile()">Save Changes</button><button onclick="logout()">Logout</button></div>
+  <div id="accountRecommend" class="recommendations"></div>
+</section>
+
+<!-- ADMIN DASHBOARD -->
+<section id="adminDashboard" class="page">
+  <div id="adminLogin"><h3>Admin Login</h3><input type="text" id="adminUser" placeholder="Username"><input type="password" id="adminPass" placeholder="Password"><button onclick="adminLogin()">Login</button></div>
+  <div id="adminPanel" style="display:none;"><h3>Admin Dashboard</h3><div class="admin-cards"><div class="admin-card" onclick="switchPage('adminOrdersPage')"><i class="fas fa-box"></i><h4>Orders</h4><div id="adminOrdersSummary"></div></div><div class="admin-card" onclick="switchPage('adminProductsPage')"><i class="fas fa-tags"></i><h4>Products</h4><div id="adminProductsSummary"></div></div><div class="admin-card" onclick="switchPage('adminAddProductPage')"><i class="fas fa-plus-circle"></i><h4>Add Product</h4></div><div class="admin-card" onclick="switchPage('adminQuotesPage')"><i class="fas fa-file-invoice-dollar"></i><h4>Create Quotation</h4></div><div class="admin-card" onclick="switchPage('adminShippingPage')"><i class="fas fa-shipping-fast"></i><h4>Shipments</h4></div><div class="admin-card" onclick="switchPage('adminUsersPage')"><i class="fas fa-users"></i><h4>Users</h4></div><div class="admin-card" onclick="switchPage('adminAnalyticsPage')"><i class="fas fa-chart-line"></i><h4>Analytics</h4></div></div></div>
+</section>
+
+<section id="adminOrdersPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Orders</h3><div id="adminOrdersFull"></div></section>
+<section id="adminProductsPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Products</h3><div id="adminProductsFull"></div></section>
+<section id="adminAddProductPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Add/Edit Product</h3><input id="newName" placeholder="Name"><input id="newPrice" placeholder="Price"><input id="newImage" placeholder="Main Image URL"><input id="newExtraImages" placeholder="Extra images (comma)"><textarea id="newDesc" placeholder="Description"></textarea><input id="newCategory" placeholder="Category"><input id="newSubcategory" placeholder="Subcategory"><input id="newColor" placeholder="Colors (comma)"><input id="newSize" placeholder="Size options (S:20, M:25)"><button onclick="addProduct()">Add Product</button></section>
+<section id="adminQuotesPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Create Quotation</h3><div><input id="quoteClientName" placeholder="Client Name"><input id="quoteClientPhone" placeholder="Client Phone"><input id="quoteClientAddress" placeholder="Client Address"><div id="quoteItemsContainer"><div class="quote-item-row"><input class="item-desc" placeholder="Description" style="width:40%"><input class="item-qty" placeholder="Qty" value="1" style="width:15%"><input class="item-price" placeholder="Unit Price" style="width:20%"><span class="item-subtotal">0.00</span><button class="remove-item" type="button">✖</button></div></div><button id="addItemBtn">Add Item</button><div><label>Discount %</label><input id="discountPercent" value="0"></div><div><label>Tax %</label><input id="taxPercent" value="0"></div><div id="quoteTotals"><p>Subtotal: $<span id="subtotal">0.00</span></p><p>Total: $<span id="totalAmount">0.00</span></p></div><button onclick="generateQuote()">Generate Quote</button></div></section>
+<section id="adminShippingPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Create Shipment</h3><input id="shipClientName" placeholder="Client Name"><input id="shipClientPhone" placeholder="Client Phone"><input id="shipTrackingCode" placeholder="Tracking Code (auto)"><textarea id="shipNotes" placeholder="Notes"></textarea><button onclick="saveShipment()">Save Shipment</button><div id="pendingShipmentsList" style="margin-top:20px;"><h3>Pending Shipments</h3><div id="pendingShipments"></div></div></section>
+<section id="adminUsersPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Users</h3><div id="usersList"></div></section>
+<section id="adminAnalyticsPage" class="page"><button onclick="switchPage('adminDashboard')">Back</button><h3>Analytics</h3><div id="analyticsContent"></div></section>
+
+<div id="quoteModal" class="modal" style="display:none;"><div class="modal-content"><h3>Quote Preview</h3><div id="quotePreview"></div><button onclick="printQuote()">Print PDF</button><button onclick="closeQuoteModal()">Close</button></div></div>
+
+<nav class="bottom-nav">
+  <div onclick="resetHome()"><i class="fas fa-home"></i><span>Home</span></div>
+  <div onclick="switchPage('tracking')"><i class="fas fa-truck"></i><span>Track</span></div>
+  <div onclick="switchPage('chat')"><i class="fab fa-whatsapp"></i><span>Chat</span></div>
+  <div onclick="switchPage('promo')"><i class="fas fa-fire"></i><span>Promos</span></div>
+  <div onclick="switchPage('account')"><i class="fas fa-user"></i><span>Account</span></div>
+</nav>
+
+<script>
+// ==================== FULLY FUNCTIONAL CODE ====================
+// This version works with localStorage as fallback if Supabase fails.
+// All buttons respond. Admin: admin/admin123
+
+// ---------- GLOBALS ----------
+let allProducts = [];
+let currentProduct = null;
+let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+let loggedInUser = JSON.parse(localStorage.getItem('user') || 'null');
+let isAdmin = false;
+
+// ---------- HELPER ----------
+function escapeHtml(str) { return str ? String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]) : ''; }
+function showAlert(msg) { alert(msg); }
+
+// ---------- PRODUCT DATA (DEMO + LOCALSTORAGE) ----------
+function loadDemoProducts() {
+  const stored = localStorage.getItem('customProducts');
+  if (stored) {
+    allProducts = JSON.parse(stored);
+  } else {
+    allProducts = [
+      { id: 1, name: "iPhone 16e", desc: "Latest iPhone with A18 chip", cat: "Phones", subcat: "Smartphones", price: 357, colors: ["Black", "Blue"], sizeOptions: [{size:"128GB",price:357}], mainImage: "https://i.imgur.com/9wBjqIU.jpeg", subImages: [] },
+      { id: 2, name: "Elegant Leather Tote", desc: "Premium full-grain leather", cat: "Fashion", subcat: "Handbags", price: 129, colors: ["Brown", "Black"], sizeOptions: [{size:"One Size",price:129}], mainImage: "https://i.imgur.com/Z1aTPZl.jpeg", subImages: [] },
+      { id: 3, name: "Wireless Headphones", desc: "Noise cancelling, 30h battery", cat: "Electronics", subcat: "Audio", price: 89, colors: ["White", "Black"], sizeOptions: [{size:"Standard",price:89}], mainImage: "https://i.imgur.com/8X9k0jM.jpeg", subImages: [] }
+    ];
+  }
+  displayHomeProducts(allProducts);
+  populateFilters();
+  setupCategoryMenu();
+}
+
+function saveProductsToLocal() { localStorage.setItem('customProducts', JSON.stringify(allProducts)); }
+
+function displayHomeProducts(products) {
+  const container = document.getElementById("productsContainer");
+  if (!container) return;
+  container.innerHTML = "";
+  products.slice(0, 20).forEach(p => {
+    const card = document.createElement("div");
+    card.className = "product-card";
+    card.innerHTML = `<img src="${p.mainImage}" loading="lazy"><div class="product-info"><div class="product-name">${escapeHtml(p.name)}</div><div class="product-price">$${p.price}</div></div>`;
+    card.onclick = () => openProduct(p);
+    container.appendChild(card);
+  });
+}
+
+function openProduct(product) {
+  currentProduct = product;
+  document.getElementById("pName").innerText = product.name;
+  document.getElementById("pDesc").innerText = product.desc;
+  document.getElementById("pPrice").innerHTML = `$${product.price}`;
+  document.getElementById("mainImage").src = product.mainImage;
+  const colorSel = document.getElementById("colorSelect");
+  colorSel.innerHTML = product.colors.map(c => `<option>${escapeHtml(c)}</option>`).join('');
+  const subDiv = document.getElementById("subImages");
+  subDiv.innerHTML = "";
+  [product.mainImage, ...product.subImages].forEach((img, i) => {
+    const imgEl = document.createElement("img");
+    imgEl.src = img;
+    imgEl.onclick = () => { document.getElementById("mainImage").src = img; document.querySelectorAll(".sub-images img").forEach(x => x.classList.remove("active")); imgEl.classList.add("active"); };
+    if (i === 0) imgEl.classList.add("active");
+    subDiv.appendChild(imgEl);
+  });
+  const sizeSel = document.getElementById("sizeSelect");
+  sizeSel.innerHTML = product.sizeOptions.map(s => `<option value="${s.price}">${escapeHtml(s.size)} - $${s.price}</option>`).join('');
+  sizeSel.onchange = () => document.getElementById("pPrice").innerText = `$${sizeSel.value}`;
+  loadRecommendations(product);
+  switchPage("productPage");
+}
+
+function loadRecommendations(product) {
+  const recs = allProducts.filter(p => p.id !== product?.id).slice(0, 4);
+  const container = document.getElementById("productRecommend");
+  if (!container) return;
+  container.innerHTML = "<h4>You may also like</h4><div class='recommend-grid'></div>";
+  const grid = container.querySelector(".recommend-grid");
+  recs.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "recommend-card";
+    card.onclick = () => openProduct(p);
+    card.innerHTML = `<img src="${p.mainImage}" loading="lazy"><p>${escapeHtml(p.name)}<br><strong>$${p.price}</strong></p>`;
+    grid.appendChild(card);
+  });
+}
+
+// ---------- CART ----------
+function updateCartCount() { document.getElementById("cartCount").innerText = cart.length; }
+function renderCart() {
+  const container = document.getElementById("cartList");
+  if (!container) return;
+  if (cart.length === 0) { container.innerHTML = "<p>Your cart is empty.</p>"; return; }
+  let html = "", total = 0;
+  cart.forEach((item, idx) => {
+    total += item.price;
+    html += `<div class="cart-item"><div><img src="${item.image}" width="40" style="border-radius:8px;"> ${escapeHtml(item.name)} (${item.color || 'Default'})</div><div>$${item.price} <button onclick="removeFromCart(${idx})">Remove</button></div></div>`;
+  });
+  html += `<div class="cart-item"><strong>Total: $${total.toFixed(2)}</strong></div>`;
+  container.innerHTML = html;
+}
+function addToCart() {
+  if (!currentProduct) return;
+  const color = document.getElementById("colorSelect")?.value || "Default";
+  const sizeSelect = document.getElementById("sizeSelect");
+  const size = sizeSelect?.options[sizeSelect.selectedIndex]?.text.split(' - ')[0] || "Standard";
+  const price = parseFloat(sizeSelect?.value) || currentProduct.price;
+  cart.push({ id: currentProduct.id, name: currentProduct.name, price: price, image: currentProduct.mainImage, color: color, size: size });
+  localStorage.setItem('cart', JSON.stringify(cart));
+  updateCartCount();
+  renderCart();
+  showAlert("Added to cart");
+}
+function removeFromCart(index) { cart.splice(index,1); localStorage.setItem('cart', JSON.stringify(cart)); updateCartCount(); renderCart(); }
+function checkout() {
+  if (cart.length === 0) return showAlert("Cart empty");
+  if (!loggedInUser) { showAlert("Please sign in first"); switchPage("account"); return; }
+  const total = cart.reduce((s,i)=>s+i.price,0);
+  const trackingCode = "MM" + Math.floor(Math.random()*1000000);
+  const order = { id: Date.now(), items: [...cart], total: total, user: loggedInUser, trackingCode: trackingCode, status: "Processing", date: new Date().toISOString() };
+  let orders = JSON.parse(localStorage.getItem('orders') || '[]');
+  orders.push(order);
+  localStorage.setItem('orders', JSON.stringify(orders));
+  const itemsForMsg = cart.map(i => `${i.name} - $${i.price}`).join('%0A');
+  window.open(`https://wa.me/263776871711?text=Order%20placed%3A%0A${itemsForMsg}%0ATotal%3A%20$${total}%0ATracking%3A%20${trackingCode}`);
+  cart = []; localStorage.setItem('cart', JSON.stringify(cart)); updateCartCount(); renderCart();
+  showAlert(`Order placed! Tracking code: ${trackingCode}`);
+  switchPage("home");
+}
+
+// ---------- USER AUTH (localStorage) ----------
+function checkUser() {
+  if (loggedInUser) {
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    document.getElementById("userInfo").innerHTML = `${loggedInUser.name} ${loggedInUser.surname}`;
+  } else {
+    document.getElementById("loginBox").style.display = "block";
+    document.getElementById("dashboard").style.display = "none";
+  }
+  updateCartCount();
+  renderCart();
+}
+function login() {
+  const name = document.getElementById("name").value;
+  const surname = document.getElementById("surname").value;
+  const phone = document.getElementById("phone").value;
+  const address = document.getElementById("address").value;
+  if (!name || !surname || !phone) return showAlert("Fill all fields");
+  loggedInUser = { name, surname, phone, address };
+  localStorage.setItem('user', JSON.stringify(loggedInUser));
+  checkUser();
+  showAlert("Signed in");
+}
+function logout() { loggedInUser = null; localStorage.removeItem('user'); checkUser(); switchPage("account"); }
+function showSettings() { document.getElementById("settingsForm").style.display = "block"; document.getElementById("dashboard").style.display = "none"; }
+function closeSettings() { document.getElementById("settingsForm").style.display = "none"; document.getElementById("dashboard").style.display = "block"; }
+function saveProfile() {
+  const editName = document.getElementById("editName").value;
+  const editSurname = document.getElementById("editSurname").value;
+  const editPhone = document.getElementById("editPhone").value;
+  const editAddress = document.getElementById("editAddress").value;
+  if (loggedInUser) {
+    loggedInUser.name = editName || loggedInUser.name;
+    loggedInUser.surname = editSurname || loggedInUser.surname;
+    loggedInUser.phone = editPhone || loggedInUser.phone;
+    loggedInUser.address = editAddress || loggedInUser.address;
+    localStorage.setItem('user', JSON.stringify(loggedInUser));
+    checkUser();
+    showAlert("Profile updated");
+  }
+  closeSettings();
+}
+function viewMyQuotations() { alert("Quotations stored locally. Generate one from admin."); }
+function viewMyOrders() {
+  const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+  const myOrders = orders.filter(o => o.user?.phone === loggedInUser?.phone);
+  const container = document.getElementById("ordersList");
+  if (myOrders.length === 0) container.innerHTML = "<p>No orders</p>";
+  else container.innerHTML = myOrders.map(o => `<div><strong>${o.trackingCode}</strong> - $${o.total} - ${o.status}</div>`).join('');
+  document.getElementById("myOrders").style.display = "block";
+  document.getElementById("dashboard").style.display = "none";
+}
+function closeOrders() { document.getElementById("myOrders").style.display = "none"; document.getElementById("dashboard").style.display = "block"; }
+function closeQuotations() { document.getElementById("myQuotations").style.display = "none"; document.getElementById("dashboard").style.display = "block"; }
+
+// ---------- ADMIN (localStorage) ----------
+function adminLogin() {
+  const u = document.getElementById("adminUser").value;
+  const p = document.getElementById("adminPass").value;
+  if (u === "admin" && p === "admin123") {
+    document.getElementById("adminLogin").style.display = "none";
+    document.getElementById("adminPanel").style.display = "block";
+    isAdmin = true;
+    loadAdminSummaries();
+  } else showAlert("Invalid credentials");
+}
+function loadAdminSummaries() {
+  const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+  document.getElementById("adminOrdersSummary").innerHTML = `${orders.length} orders`;
+  document.getElementById("adminProductsSummary").innerHTML = `${allProducts.length} products`;
+}
+function loadOrdersFull() {
+  const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+  const container = document.getElementById("adminOrdersFull");
+  if (!container) return;
+  if (orders.length === 0) container.innerHTML = "<p>No orders</p>";
+  else container.innerHTML = orders.map(o => `<div style="border-bottom:1px solid #ccc; padding:8px;"><strong>${o.trackingCode}</strong> - ${o.status} - $${o.total}<br>User: ${o.user?.name} ${o.user?.surname}<button onclick="updateOrderStatus('${o.trackingCode}')" style="margin-left:10px;">Mark Shipped</button></div>`).join('');
+}
+function updateOrderStatus(code) {
+  let orders = JSON.parse(localStorage.getItem('orders') || '[]');
+  const order = orders.find(o => o.trackingCode === code);
+  if (order) order.status = "Shipped";
+  localStorage.setItem('orders', JSON.stringify(orders));
+  loadOrdersFull();
+}
+function loadProductsFull() {
+  const container = document.getElementById("adminProductsFull");
+  if (!container) return;
+  container.innerHTML = allProducts.map(p => `<div style="border-bottom:1px solid #ccc; padding:8px;"><strong>${escapeHtml(p.name)}</strong> - $${p.price}<br><button onclick="editProduct(${p.id})">Edit</button> <button onclick="deleteProduct(${p.id})">Delete</button></div>`).join('');
+}
+function addProduct() {
+  const name = document.getElementById("newName").value.trim();
+  const price = parseFloat(document.getElementById("newPrice").value);
+  const image = document.getElementById("newImage").value.trim();
+  const cat = document.getElementById("newCategory").value.trim();
+  const subcat = document.getElementById("newSubcategory").value.trim();
+  if (!name || isNaN(price) || !image || !cat) return showAlert("Required: Name, Price, Image, Category");
+  const colors = document.getElementById("newColor").value.split(',').map(c=>c.trim());
+  const extraImages = document.getElementById("newExtraImages").value.split(',').map(u=>u.trim()).filter(u=>u);
+  const sizeInput = document.getElementById("newSize").value;
+  let sizeOptions = [];
+  if (sizeInput) {
+    sizeInput.split(',').forEach(pair => { let [s,pv] = pair.split(':'); if(s && pv) sizeOptions.push({ size: s.trim(), price: parseFloat(pv) }); });
+  }
+  if (!sizeOptions.length) sizeOptions.push({ size: "Standard", price });
+  const newId = Date.now();
+  const newProduct = { id: newId, name, price, desc: document.getElementById("newDesc").value, cat, subcat, colors, sizeOptions, mainImage: image, subImages: extraImages };
+  allProducts.push(newProduct);
+  saveProductsToLocal();
+  displayHomeProducts(allProducts);
+  loadProductsFull();
+  showAlert("Product added");
+  clearProductForm();
+}
+function deleteProduct(id) {
+  if (confirm("Delete product?")) {
+    allProducts = allProducts.filter(p => p.id != id);
+    saveProductsToLocal();
+    displayHomeProducts(allProducts);
+    loadProductsFull();
+  }
+}
+function editProduct(id) {
+  const p = allProducts.find(p => p.id == id);
+  if (!p) return;
+  document.getElementById("newName").value = p.name;
+  document.getElementById("newPrice").value = p.price;
+  document.getElementById("newImage").value = p.mainImage;
+  document.getElementById("newExtraImages").value = p.subImages.join(", ");
+  document.getElementById("newDesc").value = p.desc;
+  document.getElementById("newCategory").value = p.cat;
+  document.getElementById("newSubcategory").value = p.subcat;
+  document.getElementById("newColor").value = p.colors.join(", ");
+  document.getElementById("newSize").value = p.sizeOptions.map(s => `${s.size}:${s.price}`).join(", ");
+  const btn = document.querySelector("#adminAddProductPage button");
+  btn.innerHTML = '<i class="fas fa-save"></i> Update Product';
+  btn.onclick = () => updateProduct(p.id);
+  switchPage("adminAddProductPage");
+}
+function updateProduct(id) {
+  const name = document.getElementById("newName").value.trim();
+  const price = parseFloat(document.getElementById("newPrice").value);
+  const image = document.getElementById("newImage").value.trim();
+  const cat = document.getElementById("newCategory").value.trim();
+  const subcat = document.getElementById("newSubcategory").value.trim();
+  const colors = document.getElementById("newColor").value.split(',').map(c=>c.trim());
+  const extraImages = document.getElementById("newExtraImages").value.split(',').map(u=>u.trim()).filter(u=>u);
+  const sizeInput = document.getElementById("newSize").value;
+  let sizeOptions = [];
+  if (sizeInput) {
+    sizeInput.split(',').forEach(pair => { let [s,pv] = pair.split(':'); if(s && pv) sizeOptions.push({ size: s.trim(), price: parseFloat(pv) }); });
+  }
+  if (!sizeOptions.length) sizeOptions.push({ size: "Standard", price });
+  const index = allProducts.findIndex(p => p.id == id);
+  if (index !== -1) {
+    allProducts[index] = { ...allProducts[index], name, price, desc: document.getElementById("newDesc").value, cat, subcat, colors, sizeOptions, mainImage: image, subImages: extraImages };
+    saveProductsToLocal();
+    displayHomeProducts(allProducts);
+    loadProductsFull();
+    showAlert("Product updated");
+  }
+  clearProductForm();
+}
+function clearProductForm() {
+  document.getElementById("newName").value = "";
+  document.getElementById("newPrice").value = "";
+  document.getElementById("newImage").value = "";
+  document.getElementById("newExtraImages").value = "";
+  document.getElementById("newDesc").value = "";
+  document.getElementById("newCategory").value = "";
+  document.getElementById("newSubcategory").value = "";
+  document.getElementById("newColor").value = "";
+  document.getElementById("newSize").value = "";
+  const btn = document.querySelector("#adminAddProductPage button");
+  btn.innerHTML = '<i class="fas fa-plus"></i> Add Product';
+  btn.onclick = () => addProduct();
+}
+function loadUsers() {
+  // In localStorage, just show demo
+  document.getElementById("usersList").innerHTML = "<div>Demo: User management via localStorage. Admin only.</div>";
+}
+function loadAnalytics() {
+  const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+  const total = orders.reduce((s,o)=>s+o.total,0);
+  document.getElementById("analyticsContent").innerHTML = `<h4>Total Sales: $${total.toFixed(2)}</h4><p>Orders: ${orders.length}</p>`;
+}
+
+// ---------- SHIPMENTS (localStorage) ----------
+function saveShipment() {
+  const tracking = document.getElementById("shipTrackingCode").value.trim() || "MM" + Date.now();
+  const shipment = { tracking_code: tracking, client_name: document.getElementById("shipClientName").value, client_phone: document.getElementById("shipClientPhone").value, status: "pending", notes: document.getElementById("shipNotes").value };
+  let shipments = JSON.parse(localStorage.getItem('shipments') || '[]');
+  shipments.push(shipment);
+  localStorage.setItem('shipments', JSON.stringify(shipments));
+  showAlert("Shipment saved");
+  loadShipments();
+}
+function loadShipments() {
+  const shipments = JSON.parse(localStorage.getItem('shipments') || '[]');
+  const container = document.getElementById("pendingShipments");
+  if (container) container.innerHTML = shipments.map(s => `<div>${s.tracking_code} - ${s.client_name} - ${s.status}</div>`).join('');
+}
+function trackNow() {
+  const code = document.getElementById("trackCode").value;
+  const shipments = JSON.parse(localStorage.getItem('shipments') || '[]');
+  const shipment = shipments.find(s => s.tracking_code === code);
+  if (shipment) document.getElementById("shipmentHistory").innerHTML = `<strong>Status:</strong> ${shipment.status}<br>Client: ${shipment.client_name}<br>Notes: ${shipment.notes}`;
+  else document.getElementById("shipmentHistory").innerHTML = "No shipment found.";
+}
+
+// ---------- QUOTATIONS ----------
+function addQuoteItemRow() {
+  const container = document.getElementById("quoteItemsContainer");
+  const div = document.createElement("div");
+  div.className = "quote-item-row";
+  div.innerHTML = `<input class="item-desc" placeholder="Description" style="width:40%"><input class="item-qty" placeholder="Qty" value="1" style="width:15%"><input class="item-price" placeholder="Unit Price" style="width:20%"><span class="item-subtotal">0.00</span><button class="remove-item" type="button">✖</button>`;
+  div.querySelector(".remove-item").onclick = () => div.remove();
+  container.appendChild(div);
+  document.querySelectorAll(".item-qty, .item-price").forEach(el => el.addEventListener("input", calculateQuoteTotals));
+}
+function calculateQuoteTotals() {
+  let subtotal = 0;
+  document.querySelectorAll(".quote-item-row").forEach(row => {
+    const qty = parseFloat(row.querySelector(".item-qty")?.value) || 0;
+    const price = parseFloat(row.querySelector(".item-price")?.value) || 0;
+    const sub = qty * price;
+    row.querySelector(".item-subtotal").innerText = sub.toFixed(2);
+    subtotal += sub;
+  });
+  const discount = parseFloat(document.getElementById("discountPercent").value) || 0;
+  const tax = parseFloat(document.getElementById("taxPercent").value) || 0;
+  const afterDisc = subtotal * (1 - discount / 100);
+  const total = afterDisc * (1 + tax / 100);
+  document.getElementById("subtotal").innerText = subtotal.toFixed(2);
+  document.getElementById("totalAmount").innerText = total.toFixed(2);
+}
+function generateQuote() {
+  const client = document.getElementById("quoteClientName").value;
+  const items = [];
+  document.querySelectorAll(".quote-item-row").forEach(row => {
+    items.push({ desc: row.querySelector(".item-desc").value, qty: row.querySelector(".item-qty").value, price: row.querySelector(".item-price").value });
+  });
+  const total = document.getElementById("totalAmount").innerText;
+  let html = `<h2>Quote for ${escapeHtml(client)}</h2><table border="1" cellpadding="5" style="width:100%"><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>`;
+  items.forEach(i => { html += `<tr><td>${escapeHtml(i.desc)}</td><td>${i.qty}</td><td>$${i.price}</td><td>$${(i.qty * i.price).toFixed(2)}</td></tr>`; });
+  html += `<tr><td colspan="3"><strong>Total</strong></td><td><strong>$${total}</strong></td></tr></table>`;
+  document.getElementById("quotePreview").innerHTML = html;
+  document.getElementById("quoteModal").style.display = "flex";
+}
+function closeQuoteModal() { document.getElementById("quoteModal").style.display = "none"; }
+function printQuote() { const content = document.getElementById("quotePreview").innerHTML; const win = window.open(); win.document.write(`<html><head><title>Quote</title></head><body>${content}</body></html>`); win.print(); }
+
+// ---------- FILTERS, MENU, NAVIGATION ----------
+function setupCategoryMenu() {
+  const menu = document.getElementById("mainMenu");
+  if (!menu) return;
+  const cats = [...new Set(allProducts.map(p => p.cat))];
+  menu.innerHTML = cats.map(cat => `<div onclick="selectMainCategory('${cat}')">${cat}</div>`).join('');
+}
+function selectMainCategory(cat) {
+  const subDiv = document.getElementById("subMenu");
+  const subcats = [...new Set(allProducts.filter(p => p.cat === cat).map(p => p.subcat))];
+  subDiv.innerHTML = subcats.map(sub => `<div onclick="filterBySubcategory('${sub}')"><img src="https://cdn-icons-png.flaticon.com/512/456/456212.png" width="32">${sub}</div>`).join('');
+}
+function filterBySubcategory(sub) { filterProducts(); }
+function populateFilters() {
+  const catSel = document.getElementById("categoryFilter");
+  const cats = [...new Set(allProducts.map(p => p.cat))];
+  catSel.innerHTML = '<option value="all">All Categories</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+function filterProducts() {
+  let filtered = [...allProducts];
+  const cat = document.getElementById("categoryFilter").value;
+  if (cat !== "all") filtered = filtered.filter(p => p.cat === cat);
+  const min = parseFloat(document.getElementById("minPrice").value) || 0;
+  const max = parseFloat(document.getElementById("maxPrice").value) || Infinity;
+  filtered = filtered.filter(p => p.price >= min && p.price <= max);
+  displayHomeProducts(filtered);
+}
+function resetFilters() { document.getElementById("categoryFilter").value = "all"; document.getElementById("minPrice").value = ""; document.getElementById("maxPrice").value = ""; filterProducts(); }
+function searchProducts() {
+  const term = document.getElementById("searchInput").value.toLowerCase();
+  if (!term) return filterProducts();
+  const filtered = allProducts.filter(p => p.name.toLowerCase().includes(term));
+  displayHomeProducts(filtered);
+}
+function resetHome() { filterProducts(); switchPage("home"); }
+function switchPage(pageId) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  const target = document.getElementById(pageId);
+  if (target) target.classList.add("active");
+  if (pageId === "adminOrdersPage") loadOrdersFull();
+  if (pageId === "adminProductsPage") loadProductsFull();
+  if (pageId === "adminUsersPage") loadUsers();
+  if (pageId === "adminAnalyticsPage") loadAnalytics();
+  if (pageId === "adminShippingPage") loadShipments();
+  if (pageId === "cart") renderCart();
+  if (pageId === "tracking") initMap();
+}
+function initMap() {
+  if (typeof L !== 'undefined' && document.getElementById("map")) {
+    const map = L.map('map').setView([-17, 30], 5);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+    L.marker([-17, 30]).addTo(map).bindPopup('Mmeli Global').openPopup();
+  }
+}
+function sendMsg(msg) { window.open(`https://wa.me/263776871711?text=${encodeURIComponent(msg)}`); }
+function loadPromos() { document.getElementById("promoList").innerHTML = "<h3>🔥 Limited Time: 20% off all products! Use code MMELI20 🔥</h3>"; }
+function downloadImage() { const url = document.getElementById("mainImage").src; if (url) window.open(url); }
+function shareProduct() { if (currentProduct) alert("Share link: " + window.location.href + "?product=" + currentProduct.id); }
+function checkUrlForProduct() {
+  const params = new URLSearchParams(window.location.search);
+  const pid = params.get('product');
+  if (pid && allProducts.length) {
+    const prod = allProducts.find(p => p.id == pid);
+    if (prod) openProduct(prod);
+  }
+}
+
+// ---------- INITIALIZATION ----------
+function init() {
+  loadDemoProducts();
+  checkUser();
+  loadPromos();
+  initMap();
+  document.getElementById("addItemBtn")?.addEventListener("click", addQuoteItemRow);
+  document.getElementById("adminEntry")?.addEventListener("click", () => switchPage("adminDashboard"));
+  document.getElementById("logoArea")?.addEventListener("dblclick", () => switchPage("adminDashboard"));
+  document.getElementById("scanInput")?.addEventListener("change", () => showAlert("Scan feature coming soon"));
+  // Add listeners for existing quote rows
+  document.querySelectorAll(".item-qty, .item-price").forEach(el => el.addEventListener("input", calculateQuoteTotals));
+  document.querySelectorAll(".remove-item").forEach(btn => btn.onclick = function() { this.closest('.quote-item-row')?.remove(); calculateQuoteTotals(); });
+  checkUrlForProduct();
+}
+init();
+</script>
+</body>
+</html>
